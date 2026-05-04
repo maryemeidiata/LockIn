@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { clearCache } from '../lib/cache'
+import { weeksSince } from '../lib/weekUtils'
 
 export default function Profile() {
   const { user, profile, refreshProfile } = useAuth()
@@ -15,10 +16,63 @@ export default function Profile() {
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [stats, setStats] = useState(null)
   const fileRef = useRef()
 
   const avatarUrl = profile?.avatar_url
   const initials = profile?.avatar_initials || profile?.name?.split(' ').map(w => w[0]).join('').toUpperCase() || '?'
+
+  useEffect(() => {
+    if (user) fetchStats()
+  }, [user])
+
+  async function fetchStats() {
+    const { data: memberships } = await supabase
+      .from('group_members')
+      .select('group_id')
+      .eq('user_id', user.id)
+    const groupCount = memberships?.length || 0
+
+    const { data: commitments } = await supabase
+      .from('commitments')
+      .select('id')
+      .eq('user_id', user.id)
+    const commitmentIds = commitments?.map(c => c.id) || []
+
+    let totalCheckins = 0
+    let currentStreak = 0
+    if (commitmentIds.length) {
+      const { count } = await supabase
+        .from('checkins')
+        .select('*', { count: 'exact', head: true })
+        .in('commitment_id', commitmentIds)
+      totalCheckins = count || 0
+
+      const { data: recentCheckins } = await supabase
+        .from('checkins')
+        .select('checked_in_at')
+        .in('commitment_id', commitmentIds)
+        .order('checked_in_at', { ascending: false })
+        .limit(30)
+
+      if (recentCheckins?.length) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        let streak = 0
+        let checkDate = new Date(today)
+        const checkinDates = new Set(
+          recentCheckins.map(c => new Date(c.checked_in_at).toDateString())
+        )
+        while (checkinDates.has(checkDate.toDateString())) {
+          streak++
+          checkDate.setDate(checkDate.getDate() - 1)
+        }
+        currentStreak = streak
+      }
+    }
+
+    setStats({ groupCount, totalCheckins, currentStreak, weeksActive: weeksSince(profile?.created_at) })
+  }
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -40,7 +94,6 @@ export default function Profile() {
     }
 
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-
     await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id)
     await refreshProfile()
     clearCache('overview')
@@ -54,18 +107,10 @@ export default function Profile() {
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({
-        name: form.name.trim(),
-        bio: form.bio.trim(),
-        location: form.location.trim(),
-      })
+      .update({ name: form.name.trim(), bio: form.bio.trim(), location: form.location.trim() })
       .eq('id', user.id)
 
-    if (updateError) {
-      setError(updateError.message)
-      setSaving(false)
-      return
-    }
+    if (updateError) { setError(updateError.message); setSaving(false); return }
 
     await refreshProfile()
     clearCache('overview')
@@ -90,16 +135,12 @@ export default function Profile() {
     <div className="max-w-2xl mx-auto">
       <h1 className="font-serif text-[26px] text-text tracking-tight mb-6">Profile</h1>
 
-      {/* Avatar + photo upload */}
+      {/* Hero card: avatar + name */}
       <div className="bg-white border border-border rounded-xl shadow-card p-6 mb-4">
         <div className="flex items-center gap-5">
           <div className="relative">
             {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Profile"
-                className="w-20 h-20 rounded-full object-cover border-2 border-border"
-              />
+              <img src={avatarUrl} alt="Profile" className="w-20 h-20 rounded-full object-cover border-2 border-border" />
             ) : (
               <div className="w-20 h-20 rounded-full bg-burg flex items-center justify-center text-cream font-semibold text-2xl border-2 border-border">
                 {initials}
@@ -125,8 +166,13 @@ export default function Profile() {
 
           <div className="flex-1 min-w-0">
             <p className="font-serif text-xl text-text">{profile?.name}</p>
-            <p className="text-sm text-text3">{user?.email}</p>
-            {joinedDate && <p className="text-xs text-text3 mt-1">Joined {joinedDate}</p>}
+            {profile?.location && (
+              <p className="text-sm text-text3 flex items-center gap-1 mt-0.5">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {profile.location}
+              </p>
+            )}
+            {joinedDate && <p className="text-xs text-text3 mt-1">Member since {joinedDate}</p>}
           </div>
 
           {!editing && (
@@ -138,9 +184,27 @@ export default function Profile() {
             </button>
           )}
         </div>
+
+        {/* Stats row */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-0 mt-5 pt-5 border-t border-cream2">
+            <div className="text-center">
+              <p className="font-serif text-2xl text-burg leading-none">{stats.totalCheckins}</p>
+              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Check-ins</p>
+            </div>
+            <div className="text-center border-x border-cream2">
+              <p className="font-serif text-2xl text-burg leading-none">{stats.currentStreak}</p>
+              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Day streak</p>
+            </div>
+            <div className="text-center">
+              <p className="font-serif text-2xl text-burg leading-none">{stats.weeksActive}</p>
+              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Weeks active</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Info fields */}
+      {/* Bio + info / edit form */}
       <div className="bg-white border border-border rounded-xl shadow-card p-6 mb-4">
         {editing ? (
           <div className="space-y-4">
@@ -167,7 +231,7 @@ export default function Profile() {
               <input
                 value={form.location}
                 onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                placeholder="London, UK"
+                placeholder="Barcelona, Spain"
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg placeholder-text3"
               />
             </div>
@@ -183,19 +247,39 @@ export default function Profile() {
           </div>
         ) : (
           <div className="space-y-4">
-            <Field label="Bio" value={profile?.bio} placeholder="No bio yet." />
-            <Field label="Location" value={profile?.location} placeholder="Not set." />
-            <Field label="North Star" value={profile?.north_star} placeholder="Not set." />
+            {profile?.bio ? (
+              <div>
+                <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">Bio</p>
+                <p className="text-sm text-text leading-relaxed">{profile.bio}</p>
+              </div>
+            ) : (
+              <button onClick={() => setEditing(true)} className="text-sm text-text3 hover:text-burg transition-colors">
+                + Add a bio
+              </button>
+            )}
+            <div>
+              <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">North Star</p>
+              <p className="text-sm text-text font-serif italic">{profile?.north_star || <span className="text-text3 not-italic">Not set.</span>}</p>
+            </div>
+            {profile?.location && (
+              <div>
+                <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">Location</p>
+                <p className="text-sm text-text">{profile.location}</p>
+              </div>
+            )}
           </div>
         )}
         {success && <p className="text-xs text-green-600 mt-3">{success}</p>}
       </div>
 
-      {/* Account info */}
+      {/* Account */}
       <div className="bg-white border border-border rounded-xl shadow-card p-6">
         <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-4">Account</p>
         <div className="space-y-3">
-          <Field label="Email" value={user?.email} />
+          <div>
+            <p className="text-xs text-text2 uppercase tracking-wider font-medium mb-1">Email</p>
+            <p className="text-sm text-text">{user?.email}</p>
+          </div>
           <div>
             <p className="text-xs text-text2 uppercase tracking-wider font-medium mb-1">Password</p>
             <button
@@ -211,15 +295,6 @@ export default function Profile() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Field({ label, value, placeholder = '—' }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-sm text-text">{value || <span className="text-text3">{placeholder}</span>}</p>
     </div>
   )
 }

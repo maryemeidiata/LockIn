@@ -51,3 +51,14 @@ body {
   background-color: var(--cream2);
   border-radius: 6px;
 }
+
+@keyframes lock-bob {
+  0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
+  50%       { transform: translateY(-3px) rotate(1.5deg); }
+}
+
+.logo-mark-animate {
+  animation: lock-bob 3s ease-in-out infinite;
+  transform-origin: center;
+  display: inline-flex;
+}
