@@ -33,28 +33,21 @@ export default function Profile() {
       .eq('user_id', user.id)
     const groupCount = memberships?.length || 0
 
-    const { data: commitments, error: cErr } = await supabase
-      .from('commitments')
-      .select('id, week_start')
+    // Query checkins directly by user_id (avoids RLS restrictions on commitment_id path)
+    const { data: allCheckins } = await supabase
+      .from('checkins')
+      .select('commitment_id, day_of_week')
       .eq('user_id', user.id)
-    console.log('[profile stats] commitments:', commitments, cErr)
-    const commitmentIds = commitments?.map(c => c.id) || []
+    const totalCheckins = allCheckins?.length || 0
 
-    let totalCheckins = 0
-    let thisWeekCheckins = 0
-    if (commitmentIds.length) {
-      const { data: allCheckins, error: ciErr } = await supabase
-        .from('checkins')
-        .select('commitment_id, day_of_week')
-        .in('commitment_id', commitmentIds)
-      console.log('[profile stats] checkins:', allCheckins, ciErr)
-      totalCheckins = allCheckins?.length || 0
-
-      // This week's check-ins (from current week's commitments)
-      const weekStart = getCurrentWeekStartStr()
-      const thisWeekIds = commitments?.filter(c => c.week_start === weekStart).map(c => c.id) || []
-      thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.includes(ci.commitment_id)).length || 0
-    }
+    // This week's check-ins
+    const { data: thisWeekCommitments } = await supabase
+      .from('commitments')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('week_start', getCurrentWeekStartStr())
+    const thisWeekIds = new Set(thisWeekCommitments?.map(c => c.id) || [])
+    const thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.has(ci.commitment_id)).length || 0
 
     setStats({ groupCount, totalCheckins, thisWeekCheckins, weeksActive: weeksSince(profile?.created_at) })
   }
