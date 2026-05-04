@@ -34,10 +34,11 @@ export default function Profile() {
     const groupCount = memberships?.length || 0
 
     // Query checkins directly by user_id (avoids RLS restrictions on commitment_id path)
-    const { data: allCheckins } = await supabase
+    const { data: allCheckins, error: ciErr } = await supabase
       .from('checkins')
       .select('commitment_id, day_of_week')
       .eq('user_id', user.id)
+    console.log('[stats v2] user:', user.id, 'checkins:', allCheckins?.length, ciErr)
     const totalCheckins = allCheckins?.length || 0
 
     // This week's check-ins
