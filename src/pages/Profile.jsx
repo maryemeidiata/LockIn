@@ -49,12 +49,14 @@ export default function Profile() {
         .in('group_id', groupIds)
 
       const myCommitmentIds = myCommitments?.map(c => c.id) || []
+      console.log('[stats] groups:', groupIds.length, 'commitments:', myCommitmentIds)
 
       if (myCommitmentIds.length) {
-        const { data: allCheckins } = await supabase
+        const { data: allCheckins, error: ciErr } = await supabase
           .from('checkins')
           .select('commitment_id, day_of_week')
           .in('commitment_id', myCommitmentIds)
+        console.log('[stats] checkins:', allCheckins?.length, ciErr?.message)
 
         totalCheckins = allCheckins?.length || 0
         const thisWeekIds = new Set(myCommitments?.filter(c => c.week_start === weekStart).map(c => c.id) || [])
