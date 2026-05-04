@@ -35,43 +35,27 @@ export default function Profile() {
 
     const { data: commitments } = await supabase
       .from('commitments')
-      .select('id')
+      .select('id, week_start')
       .eq('user_id', user.id)
     const commitmentIds = commitments?.map(c => c.id) || []
 
     let totalCheckins = 0
-    let currentStreak = 0
+    let thisWeekCheckins = 0
     if (commitmentIds.length) {
-      const { count } = await supabase
+      const { data: allCheckins } = await supabase
         .from('checkins')
-        .select('*', { count: 'exact', head: true })
+        .select('commitment_id, day_of_week')
         .in('commitment_id', commitmentIds)
-      totalCheckins = count || 0
+      totalCheckins = allCheckins?.length || 0
 
-      const { data: recentCheckins } = await supabase
-        .from('checkins')
-        .select('checked_in_at')
-        .in('commitment_id', commitmentIds)
-        .order('checked_in_at', { ascending: false })
-        .limit(30)
-
-      if (recentCheckins?.length) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        let streak = 0
-        let checkDate = new Date(today)
-        const checkinDates = new Set(
-          recentCheckins.map(c => new Date(c.checked_in_at).toDateString())
-        )
-        while (checkinDates.has(checkDate.toDateString())) {
-          streak++
-          checkDate.setDate(checkDate.getDate() - 1)
-        }
-        currentStreak = streak
-      }
+      // This week's check-ins (from current week's commitments)
+      const { getCurrentWeekStartStr } = await import('../lib/weekUtils')
+      const weekStart = getCurrentWeekStartStr()
+      const thisWeekIds = commitments?.filter(c => c.week_start === weekStart).map(c => c.id) || []
+      thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.includes(ci.commitment_id)).length || 0
     }
 
-    setStats({ groupCount, totalCheckins, currentStreak, weeksActive: weeksSince(profile?.created_at) })
+    setStats({ groupCount, totalCheckins, thisWeekCheckins, weeksActive: weeksSince(profile?.created_at) })
   }
 
   async function handlePhotoChange(e) {
@@ -193,12 +177,12 @@ export default function Profile() {
               <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Check-ins</p>
             </div>
             <div className="text-center border-x border-cream2">
-              <p className="font-serif text-2xl text-burg leading-none">{stats.currentStreak}</p>
-              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Day streak</p>
+              <p className="font-serif text-2xl text-burg leading-none">{stats.thisWeekCheckins}</p>
+              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">This week</p>
             </div>
             <div className="text-center">
               <p className="font-serif text-2xl text-burg leading-none">{stats.weeksActive}</p>
-              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Weeks active</p>
+              <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">Weeks in</p>
             </div>
           </div>
         )}
