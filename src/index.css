@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --burg: #6B1E3A;
+  --burg-light: #8B2A4E;
+  --burg-deep: #4A1228;
+  --burg-muted: #C4738A;
+  --cream: #FAF6F1;
+  --cream2: #F2EAE0;
+  --cream3: #E8DDD0;
+  --text: #1A0A10;
+  --text2: #5C3347;
+  --text3: #9A6B7A;
+  --border: #DDD0C8;
+  --white: #FFFFFF;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-cream {
+  0%, 100% { background-color: var(--cream2); }
+  50% { background-color: var(--cream3); }
+}
+
+.page-fade {
+  animation: fadeIn 150ms ease-out;
+}
+
+.loading-pulse {
+  animation: pulse-cream 1.5s ease-in-out infinite;
+  background-color: var(--cream2);
+  border-radius: 6px;
+}
