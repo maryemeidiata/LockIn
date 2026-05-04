@@ -53,7 +53,7 @@ export default function AppLayout() {
 
       {/* Main content */}
       <main className="pb-20 md:pb-0">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-8 page-fade">
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-8 page-fade">
           <Outlet />
         </div>
       </main>

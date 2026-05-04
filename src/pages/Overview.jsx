@@ -224,7 +224,7 @@ export default function Overview() {
           </a>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-3.5">
+        <div className="flex flex-col gap-3.5">
           {groups.map(group => (
             <GroupCard key={group.id} group={group} />
           ))}
@@ -233,13 +233,8 @@ export default function Overview() {
 
       {/* Match + vote row */}
       {(match || pendingVotes.length > 0) && (
-        <div className="grid md:grid-cols-2 gap-3.5">
-          {match && (
-            <MatchCard
-              match={match}
-              onCheckIn={() => {}}
-            />
-          )}
+        <div className="flex flex-col gap-3.5">
+          {match && <MatchCard match={match} onCheckIn={() => {}} />}
           {pendingVotes.slice(0, 1).map(sub => (
             <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
           ))}
@@ -247,11 +242,7 @@ export default function Overview() {
       )}
 
       {/* AI insight */}
-      {insight && (
-        <div className="grid md:grid-cols-2 gap-3.5">
-          <InsightCard insight={insight} />
-        </div>
-      )}
+      {insight && <InsightCard insight={insight} />}
     </div>
   )
 }
