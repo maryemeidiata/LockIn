@@ -82,8 +82,8 @@ export default function GroupDetail() {
       const checkinDays = userCheckins.map(ci => ci.day_of_week)
       const checked = userCheckins.some(ci => ci.day_of_week === dayIdx)
       const userExcuses = excuses.filter(e => e.user_id === m.user_id)
-      const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
-      const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
+      const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at))
+      const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at))
       return {
         ...u,
         commitment_text: commitment?.commitment_text || '',

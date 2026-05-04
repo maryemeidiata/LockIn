@@ -38,12 +38,10 @@ export function getWeekOfMonth() {
   return Math.max(1, Math.min(4, weekNum))
 }
 
-// Convert a timestamp to a day index (Mon=0…Sun=6) relative to weekStart
-export function getDayIndexFromTimestamp(timestamp, weekStart) {
-  const date = new Date(timestamp)
-  const start = new Date(weekStart + 'T00:00:00')
-  const diff = Math.floor((date - start) / (1000 * 60 * 60 * 24))
-  return Math.max(0, Math.min(6, diff))
+// Convert a timestamp to a day index (Mon=0…Sun=6) using local day of week
+export function getDayIndexFromTimestamp(timestamp) {
+  const day = new Date(timestamp).getDay() // 0=Sun, 1=Mon…6=Sat
+  return day === 0 ? 6 : day - 1           // Mon=0 … Sun=6
 }
 
 // Build 7-day status array
