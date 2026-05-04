@@ -49,7 +49,7 @@ export default function Profile() {
         .in('group_id', groupIds)
 
       const myCommitmentIds = myCommitments?.map(c => c.id) || []
-      console.log('[stats] groups:', groupIds.length, 'commitments:', myCommitmentIds)
+      console.log('[stats] groups:', JSON.stringify(groupIds), 'commitmentIds:', JSON.stringify(myCommitmentIds))
 
       if (myCommitmentIds.length) {
         const { data: allCheckins, error: ciErr } = await supabase
