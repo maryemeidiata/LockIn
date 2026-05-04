@@ -6,6 +6,7 @@ import { getCurrentWeekStartStr, buildDayStates, getDayIndexFromTimestamp } from
 import { getCache, setCache, clearCache } from '../lib/cache'
 import CardTag from '../components/ui/CardTag'
 import Avatar from '../components/ui/Avatar'
+import DayTrack from '../components/ui/DayTrack'
 import LoadingPulse from '../components/ui/LoadingPulse'
 
 const MAX_GROUPS = 3
@@ -138,17 +139,18 @@ export default function Groups() {
 function GroupDetailCard({ group }) {
   return (
     <div className="bg-white border border-border rounded-xl shadow-card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <CardTag label={group.name} variant="group" />
-          <p className="text-xs text-text3 mt-1">{group.members?.length} members</p>
-        </div>
+      <div className="flex items-center justify-between mb-1">
+        <CardTag label={group.name} variant="group" />
         <Link
           to={`/groups/${group.id}`}
           className="text-xs font-medium text-burg hover:underline"
         >
-          View details
+          View details →
         </Link>
+      </div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-text3">{group.members?.length} members</p>
+        <DayTrack states={[]} showLabels />
       </div>
       <div className="space-y-0.5">
         {group.members?.map(m => (
@@ -158,17 +160,7 @@ function GroupDetailCard({ group }) {
               <p className="text-xs font-medium text-text">{m.name}</p>
               <p className="text-[11px] text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
             </div>
-            <div style={{ display: 'flex', gap: 3 }}>
-              {m.dayStates?.map((state, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: 9, height: 9, borderRadius: 2,
-                    background: state === 'done' ? 'var(--burg)' : state === 'excused' ? '#A8C4A2' : state === 'rejected' ? '#C4857A' : state === 'today' ? 'var(--burg-muted)' : 'var(--cream2)',
-                  }}
-                />
-              ))}
-            </div>
+            <DayTrack states={m.dayStates || []} />
           </div>
         ))}
       </div>

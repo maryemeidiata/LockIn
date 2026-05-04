@@ -213,7 +213,10 @@ export default function GroupDetail() {
 
       {/* Members */}
       <div className="bg-white border border-border rounded-xl shadow-card p-5 mb-4">
-        <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-4">Group progress this week</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-medium text-text2 uppercase tracking-wider">Group progress this week</p>
+          <DayTrack states={[]} showLabels />
+        </div>
         <div className="space-y-0.5">
           {members.map(m => (
             <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-cream2 last:border-0 group">

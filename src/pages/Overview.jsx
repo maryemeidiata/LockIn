@@ -215,34 +215,38 @@ export default function Overview() {
         createdAt={profile?.created_at}
       />
 
-      {/* Group cards + match + vote in grid on desktop */}
-      <div className="grid md:grid-cols-3 gap-3.5">
-        {groups.map(group => (
-          <GroupCard key={group.id} group={group} />
-        ))}
+      {/* Group cards */}
+      {groups.length === 0 ? (
+        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+          <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
+          <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
+            Create a group
+          </a>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-3.5">
+          {groups.map(group => (
+            <GroupCard key={group.id} group={group} />
+          ))}
+        </div>
+      )}
 
-        {groups.length === 0 && (
-          <div className="md:col-span-3 bg-white border border-border rounded-xl shadow-card p-8 text-center">
-            <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
-            <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
-              Create a group
-            </a>
-          </div>
-        )}
+      {/* Match + vote row */}
+      {(match || pendingVotes.length > 0) && (
+        <div className="grid md:grid-cols-2 gap-3.5">
+          {match && (
+            <MatchCard
+              match={match}
+              onCheckIn={() => {}}
+            />
+          )}
+          {pendingVotes.slice(0, 1).map(sub => (
+            <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
+          ))}
+        </div>
+      )}
 
-        {match && (
-          <MatchCard
-            match={match}
-            onCheckIn={() => {}}
-          />
-        )}
-
-        {pendingVotes.slice(0, 1).map(sub => (
-          <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
-        ))}
-      </div>
-
-      {/* Bottom 2-col: AI insight */}
+      {/* AI insight */}
       {insight && (
         <div className="grid md:grid-cols-2 gap-3.5">
           <InsightCard insight={insight} />

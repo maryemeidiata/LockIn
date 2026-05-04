@@ -87,7 +87,7 @@ export default function Profile() {
     : null
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-2xl mx-auto">
       <h1 className="font-serif text-[26px] text-text tracking-tight mb-6">Profile</h1>
 
       {/* Avatar + photo upload */}
