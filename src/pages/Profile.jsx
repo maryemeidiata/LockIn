@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { clearCache } from '../lib/cache'
-import { weeksSince } from '../lib/weekUtils'
+import { weeksSince, getCurrentWeekStartStr } from '../lib/weekUtils'
 
 export default function Profile() {
   const { user, profile, refreshProfile } = useAuth()
@@ -49,7 +49,6 @@ export default function Profile() {
       totalCheckins = allCheckins?.length || 0
 
       // This week's check-ins (from current week's commitments)
-      const { getCurrentWeekStartStr } = await import('../lib/weekUtils')
       const weekStart = getCurrentWeekStartStr()
       const thisWeekIds = commitments?.filter(c => c.week_start === weekStart).map(c => c.id) || []
       thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.includes(ci.commitment_id)).length || 0
