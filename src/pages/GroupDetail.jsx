@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getCurrentWeekStartStr, buildDayStates, getDayIndex } from '../lib/weekUtils'
+import { getCurrentWeekStartStr, buildDayStates, getDayIndex, getDayIndexFromTimestamp } from '../lib/weekUtils'
 import Avatar from '../components/ui/Avatar'
 import DayTrack from '../components/ui/DayTrack'
 import CommitmentForm from '../components/CommitmentForm'
@@ -65,17 +65,30 @@ export default function GroupDetail() {
       checkins = data || []
     }
 
+    let excuses = []
+    if (commitmentIds.length) {
+      const { data } = await supabase
+        .from('missed_submissions')
+        .select('user_id, submitted_at, status')
+        .in('commitment_id', commitmentIds)
+        .in('status', ['approved', 'rejected'])
+      excuses = data || []
+    }
+
     const memberList = (mems || []).map(m => {
       const u = m.users
       const commitment = commitments?.find(c => c.user_id === m.user_id)
       const userCheckins = checkins.filter(ci => ci.user_id === m.user_id)
       const checkinDays = userCheckins.map(ci => ci.day_of_week)
       const checked = userCheckins.some(ci => ci.day_of_week === dayIdx)
+      const userExcuses = excuses.filter(e => e.user_id === m.user_id)
+      const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
+      const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
       return {
         ...u,
         commitment_text: commitment?.commitment_text || '',
         commitment_id: commitment?.id || null,
-        dayStates: buildDayStates(checkinDays, weekStart),
+        dayStates: buildDayStates(checkinDays, weekStart, excusedDays, rejectedDays),
         todayChecked: checked,
       }
     })
@@ -308,9 +321,9 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
       return
     }
 
-    if (json.alreadyRegistered) {
+    if (json.addedDirectly) {
       setSuccess(true)
-      setError('They already have an account — they\'ll be added to the group automatically on their next login.')
+      setError(`${email} already has an account and has been added to the group.`)
     } else {
       setSuccess(true)
     }
@@ -327,6 +340,7 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
             <div className="bg-cream2 rounded-xl p-4 text-sm text-text">
               {error || `Invite sent to ${email}!`}
             </div>
+
             <div className="flex gap-2">
               <button onClick={() => { setSuccess(false); setEmail(''); setError('') }} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border">
                 Invite another

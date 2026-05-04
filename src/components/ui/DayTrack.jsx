@@ -1,9 +1,11 @@
 export default function DayTrack({ states = [] }) {
   const stateStyle = {
-    done: { background: 'var(--burg)' },
-    today: { background: 'var(--burg-muted)' },
-    missed: { background: 'var(--cream2)' },
-    future: { background: 'var(--cream2)' },
+    done:     { background: 'var(--burg)' },
+    excused:  { background: '#A8C4A2' },   // muted green — missed but approved
+    rejected: { background: '#C4857A' },   // muted red — missed and consequence applies
+    today:    { background: 'var(--burg-muted)' },
+    missed:   { background: 'var(--cream2)' },
+    future:   { background: 'var(--cream2)' },
   }
 
   return (

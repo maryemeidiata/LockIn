@@ -38,10 +38,17 @@ export function getWeekOfMonth() {
   return Math.max(1, Math.min(4, weekNum))
 }
 
-// Build 7-day status array from checkins (array of day_of_week integers)
-// Returns array of 'done' | 'today' | 'missed' | 'future'
-export function buildDayStates(checkinDays, weekStart) {
-  const todayIdx = getDayIndex()
+// Convert a timestamp to a day index (Mon=0…Sun=6) relative to weekStart
+export function getDayIndexFromTimestamp(timestamp, weekStart) {
+  const date = new Date(timestamp)
+  const start = new Date(weekStart + 'T00:00:00')
+  const diff = Math.floor((date - start) / (1000 * 60 * 60 * 24))
+  return Math.max(0, Math.min(6, diff))
+}
+
+// Build 7-day status array
+// Returns array of 'done' | 'excused' | 'rejected' | 'today' | 'missed' | 'future'
+export function buildDayStates(checkinDays, weekStart, excusedDays = [], rejectedDays = []) {
   const weekStartDate = new Date(weekStart + 'T00:00:00')
   const states = []
   for (let i = 0; i < 7; i++) {
@@ -49,8 +56,9 @@ export function buildDayStates(checkinDays, weekStart) {
     dayDate.setDate(weekStartDate.getDate() + i)
     const isToday = dayDate.toDateString() === new Date().toDateString()
     const isFuture = dayDate > new Date() && !isToday
-    const isDone = checkinDays.includes(i)
-    if (isDone) states.push('done')
+    if (checkinDays.includes(i)) states.push('done')
+    else if (excusedDays.includes(i)) states.push('excused')
+    else if (rejectedDays.includes(i)) states.push('rejected')
     else if (isToday) states.push('today')
     else if (isFuture) states.push('future')
     else states.push('missed')

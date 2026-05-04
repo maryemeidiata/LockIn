@@ -22,8 +22,7 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    const authHeader = req.headers.get('Authorization') ?? ''
-    const jwt = authHeader.replace('Bearer ', '')
+    const jwt = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
     const { data: { user: caller } } = await admin.auth.getUser(jwt)
     if (!caller) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -33,44 +32,55 @@ Deno.serve(async (req: Request) => {
 
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Check if already a member
+    // Check if user already has an account
     const { data: existingUser } = await admin
-      .from('users').select('id').eq('email', normalizedEmail).single()
+      .from('users')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .single()
 
     if (existingUser) {
+      // Check if already a member
       const { data: alreadyMember } = await admin
-        .from('group_members').select('user_id')
-        .eq('group_id', group_id).eq('user_id', existingUser.id).single()
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', group_id)
+        .eq('user_id', existingUser.id)
+        .single()
+
       if (alreadyMember) {
         return new Response(JSON.stringify({ error: 'This person is already in the group' }), {
           status: 409, headers: { ...cors, 'Content-Type': 'application/json' },
         })
       }
+
+      // Already registered — add them directly
+      await admin.from('group_members').insert({ group_id, user_id: existingUser.id })
+      return new Response(JSON.stringify({ ok: true, addedDirectly: true }), {
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
     }
 
-    // Record invitation
+    // New user — record invitation and send invite email
     await admin.from('invitations').upsert({
       group_id,
       invited_email: normalizedEmail,
       invited_by: caller.id,
+      status: 'pending',
     }, { onConflict: 'group_id,invited_email' })
 
-    // Send invite email (works for new users; existing users get a magic link)
-    const redirectTo = `https://lockin-app-azure.vercel.app/`
     const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
-      redirectTo,
+      redirectTo: 'https://lockin-app-azure.vercel.app/',
       data: { group_id, group_name, inviter_name },
     })
 
-    // "User already registered" just means they have an account — invitation is still saved and
-    // they'll be auto-joined on their next login via the pending invitations check
-    if (inviteError && !inviteError.message.includes('already registered')) {
+    if (inviteError) {
       return new Response(JSON.stringify({ error: inviteError.message }), {
         status: 500, headers: { ...cors, 'Content-Type': 'application/json' },
       })
     }
 
-    return new Response(JSON.stringify({ ok: true, alreadyRegistered: !!inviteError }), {
+    return new Response(JSON.stringify({ ok: true, addedDirectly: false }), {
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   } catch (err) {

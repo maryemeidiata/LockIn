@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getCurrentWeekStartStr, buildDayStates } from '../lib/weekUtils'
+import { getCurrentWeekStartStr, buildDayStates, getDayIndexFromTimestamp } from '../lib/weekUtils'
 import { getCache, setCache, clearCache } from '../lib/cache'
 import CardTag from '../components/ui/CardTag'
 import Avatar from '../components/ui/Avatar'
@@ -50,15 +50,24 @@ export default function Groups() {
           .select('commitment_id, user_id, day_of_week')
           .in('commitment_id', (commitments || []).map(c => c.id))
 
+        const { data: excuses } = await supabase
+          .from('missed_submissions')
+          .select('user_id, submitted_at, status')
+          .in('commitment_id', (commitments || []).map(c => c.id))
+          .in('status', ['approved', 'rejected'])
+
         const memberList = (members || []).map(m => {
           const commitment = commitments?.find(c => c.user_id === m.user_id)
           const checkinDays = (checkins || [])
             .filter(ci => ci.user_id === m.user_id)
             .map(ci => ci.day_of_week)
+          const userExcuses = (excuses || []).filter(e => e.user_id === m.user_id)
+          const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
+          const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
           return {
             ...m.users,
             commitment_text: commitment?.commitment_text || '',
-            dayStates: buildDayStates(checkinDays, weekStart),
+            dayStates: buildDayStates(checkinDays, weekStart, excusedDays, rejectedDays),
           }
         })
 
@@ -155,7 +164,7 @@ function GroupDetailCard({ group }) {
                   key={i}
                   style={{
                     width: 9, height: 9, borderRadius: 2,
-                    background: state === 'done' ? 'var(--burg)' : state === 'today' ? 'var(--burg-muted)' : 'var(--cream2)',
+                    background: state === 'done' ? 'var(--burg)' : state === 'excused' ? '#A8C4A2' : state === 'rejected' ? '#C4857A' : state === 'today' ? 'var(--burg-muted)' : 'var(--cream2)',
                   }}
                 />
               ))}

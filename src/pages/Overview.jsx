@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getCurrentWeekStartStr, formatDate, buildDayStates, weeksSince } from '../lib/weekUtils'
+import { getCurrentWeekStartStr, formatDate, buildDayStates, weeksSince, getDayIndexFromTimestamp } from '../lib/weekUtils'
 import { getCache, setCache } from '../lib/cache'
 import NorthStarBar from '../components/NorthStarBar'
 import GroupCard from '../components/GroupCard'
@@ -78,15 +78,28 @@ export default function Overview() {
           checkins = data || []
         }
 
+        let excuses = []
+        if (commitmentIds.length) {
+          const { data } = await supabase
+            .from('missed_submissions')
+            .select('user_id, submitted_at, status')
+            .in('commitment_id', commitmentIds)
+            .in('status', ['approved', 'rejected'])
+          excuses = data || []
+        }
+
         const memberList = (members || []).map(m => {
           const u = m.users
           const commitment = commitments?.find(c => c.user_id === m.user_id)
           const userCheckins = checkins.filter(ci => ci.user_id === m.user_id)
           const checkinDays = userCheckins.map(ci => ci.day_of_week)
+          const userExcuses = excuses.filter(e => e.user_id === m.user_id)
+          const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
+          const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at, weekStart))
           return {
             ...u,
             commitment_text: commitment?.commitment_text || '',
-            dayStates: buildDayStates(checkinDays, weekStart),
+            dayStates: buildDayStates(checkinDays, weekStart, excusedDays, rejectedDays),
           }
         })
 
