@@ -13,9 +13,18 @@ function colorFromId(id = '') {
   return PALETTE[Math.abs(hash) % PALETTE.length]
 }
 
-export default function Avatar({ userId, initials, size = 'md' }) {
+export default function Avatar({ userId, initials, avatarUrl, size = 'md' }) {
   const sizeMap = { sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base' }
   const color = colorFromId(userId)
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={initials}
+        className={`${sizeMap[size]} rounded-full object-cover flex-shrink-0 border border-border`}
+      />
+    )
+  }
   return (
     <div className={`${sizeMap[size]} ${color} rounded-full flex items-center justify-center font-medium flex-shrink-0`}>
       {(initials || '??').toUpperCase()}

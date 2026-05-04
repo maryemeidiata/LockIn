@@ -13,6 +13,7 @@ import NorthStar from './pages/NorthStar'
 import AIInsights from './pages/AIInsights'
 import History from './pages/History'
 import Votes from './pages/Votes'
+import Profile from './pages/Profile'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/insights" element={<AIInsights />} />
         <Route path="/history" element={<History />} />
         <Route path="/votes" element={<Votes />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

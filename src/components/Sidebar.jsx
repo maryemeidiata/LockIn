@@ -79,8 +79,12 @@ export default function Sidebar({ pendingVotes = 0, groupCount = 0 }) {
       </nav>
 
       {/* User */}
-      <div style={{ padding: '16px 20px', borderTop: '0.5px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Avatar userId={profile?.id} initials={profile?.avatar_initials} size="sm" />
+      <NavLink
+        to="/profile"
+        style={{ padding: '16px 20px', borderTop: '0.5px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', cursor: 'pointer' }}
+        className="hover:bg-white/5 transition-colors"
+      >
+        <Avatar userId={profile?.id} initials={profile?.avatar_initials} avatarUrl={profile?.avatar_url} size="sm" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12, color: 'var(--cream)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {profile?.name || 'You'}
@@ -89,7 +93,7 @@ export default function Sidebar({ pendingVotes = 0, groupCount = 0 }) {
             {groupCount} active group{groupCount !== 1 ? 's' : ''}
           </div>
         </div>
-      </div>
+      </NavLink>
     </div>
   )
 }
