@@ -33,19 +33,21 @@ export default function Profile() {
       .eq('user_id', user.id)
     const groupCount = memberships?.length || 0
 
-    const { data: commitments } = await supabase
+    const { data: commitments, error: cErr } = await supabase
       .from('commitments')
       .select('id, week_start')
       .eq('user_id', user.id)
+    console.log('[profile stats] commitments:', commitments, cErr)
     const commitmentIds = commitments?.map(c => c.id) || []
 
     let totalCheckins = 0
     let thisWeekCheckins = 0
     if (commitmentIds.length) {
-      const { data: allCheckins } = await supabase
+      const { data: allCheckins, error: ciErr } = await supabase
         .from('checkins')
         .select('commitment_id, day_of_week')
         .in('commitment_id', commitmentIds)
+      console.log('[profile stats] checkins:', allCheckins, ciErr)
       totalCheckins = allCheckins?.length || 0
 
       // This week's check-ins (from current week's commitments)
