@@ -33,22 +33,34 @@ export default function Profile() {
       .eq('user_id', user.id)
     const groupCount = memberships?.length || 0
 
-    // Query checkins directly by user_id (avoids RLS restrictions on commitment_id path)
-    const { data: allCheckins, error: ciErr } = await supabase
-      .from('checkins')
-      .select('commitment_id, day_of_week')
-      .eq('user_id', user.id)
-    console.log('[stats v2] user:', user.id, 'checkins:', allCheckins?.length, ciErr)
-    const totalCheckins = allCheckins?.length || 0
+    // Get all group IDs the user belongs to, then their commitment IDs in those groups.
+    // This mirrors GroupDetail's query pattern which the RLS allows.
+    const groupIds = memberships?.map(m => m.group_id) || []
+    let totalCheckins = 0
+    let thisWeekCheckins = 0
 
-    // This week's check-ins
-    const { data: thisWeekCommitments } = await supabase
-      .from('commitments')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('week_start', getCurrentWeekStartStr())
-    const thisWeekIds = new Set(thisWeekCommitments?.map(c => c.id) || [])
-    const thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.has(ci.commitment_id)).length || 0
+    if (groupIds.length) {
+      const weekStart = getCurrentWeekStartStr()
+
+      const { data: myCommitments } = await supabase
+        .from('commitments')
+        .select('id, week_start')
+        .eq('user_id', user.id)
+        .in('group_id', groupIds)
+
+      const myCommitmentIds = myCommitments?.map(c => c.id) || []
+
+      if (myCommitmentIds.length) {
+        const { data: allCheckins } = await supabase
+          .from('checkins')
+          .select('commitment_id, day_of_week')
+          .in('commitment_id', myCommitmentIds)
+
+        totalCheckins = allCheckins?.length || 0
+        const thisWeekIds = new Set(myCommitments?.filter(c => c.week_start === weekStart).map(c => c.id) || [])
+        thisWeekCheckins = allCheckins?.filter(ci => thisWeekIds.has(ci.commitment_id)).length || 0
+      }
+    }
 
     setStats({ groupCount, totalCheckins, thisWeekCheckins, weeksActive: weeksSince(profile?.created_at) })
   }
