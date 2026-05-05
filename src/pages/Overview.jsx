@@ -10,6 +10,8 @@ import VoteCard from '../components/VoteCard'
 import InsightCard from '../components/InsightCard'
 import WeekBadge from '../components/ui/WeekBadge'
 import LoadingPulse from '../components/ui/LoadingPulse'
+import NotificationBanner from '../components/NotificationBanner'
+import { useNotifications } from '../hooks/useNotifications'
 
 export default function Overview() {
   const { user, profile } = useAuth()
@@ -18,6 +20,8 @@ export default function Overview() {
   const [groups, setGroups] = useState(cached?.groups ?? [])
   const [match, setMatch] = useState(cached?.match ?? null)
   const [pendingVotes, setPendingVotes] = useState(cached?.pendingVotes ?? [])
+  const [showNotifBanner, setShowNotifBanner] = useState(false)
+  const { permission, requestPermission } = useNotifications(user?.id)
   const [insight, setInsight] = useState(cached?.insight ?? null)
 
   const weekStart = getCurrentWeekStartStr()
@@ -29,6 +33,12 @@ export default function Overview() {
     if (!user) return
     fetchAll()
   }, [user])
+
+  useEffect(() => {
+    if (permission === 'default' && !sessionStorage.getItem('notif-dismissed')) {
+      setShowNotifBanner(true)
+    }
+  }, [permission])
 
   async function fetchAll() {
     if (!getCache('overview')) setLoading(true)
@@ -208,6 +218,20 @@ export default function Overview() {
         </div>
         <WeekBadge />
       </div>
+
+      {/* Notification banner */}
+      {showNotifBanner && (
+        <NotificationBanner
+          onEnable={async () => {
+            await requestPermission(user?.id)
+            setShowNotifBanner(false)
+          }}
+          onDismiss={() => {
+            sessionStorage.setItem('notif-dismissed', '1')
+            setShowNotifBanner(false)
+          }}
+        />
+      )}
 
       {/* North Star */}
       <NorthStarBar

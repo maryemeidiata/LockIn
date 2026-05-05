@@ -24,6 +24,10 @@ export default function GroupDetail() {
   const [showMissForm, setShowMissForm] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [pendingInvites, setPendingInvites] = useState([])
+  const [nudgeTarget, setNudgeTarget] = useState(null) // { id, name }
+  const [nudgeMsg, setNudgeMsg] = useState('')
+  const [nudgeSending, setNudgeSending] = useState(false)
+  const [nudgeSent, setNudgeSent] = useState(false)
 
   const weekStart = getCurrentWeekStartStr()
   const dayIdx = getDayIndex()
@@ -139,6 +143,28 @@ export default function GroupDetail() {
     fetchPendingInvites()
   }
 
+  async function sendNudge() {
+    if (!nudgeTarget) return
+    setNudgeSending(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nudge-friend`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ to_user_id: nudgeTarget.id, message: nudgeMsg.trim() || undefined }),
+    })
+    setNudgeSending(false)
+    setNudgeSent(true)
+    setTimeout(() => {
+      setNudgeTarget(null)
+      setNudgeMsg('')
+      setNudgeSent(false)
+    }, 2000)
+  }
+
   if (loading) return <LoadingPulse lines={5} />
 
   const isCreator = group?.created_by === user.id
@@ -229,10 +255,19 @@ export default function GroupDetail() {
                 <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
               </div>
               <DayTrack states={m.dayStates} />
+              {m.id !== user.id && (
+                <button
+                  onClick={() => { setNudgeTarget({ id: m.id, name: m.name?.split(' ')[0] || m.name }); setNudgeMsg('') }}
+                  className="ml-1 text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  title="Send a nudge"
+                >
+                  Nudge
+                </button>
+              )}
               {isCreator && m.id !== user.id && (
                 <button
                   onClick={() => removeMember(m.id)}
-                  className="ml-1 text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Remove from group"
                 >
                   ✕
@@ -278,6 +313,42 @@ export default function GroupDetail() {
           onInvited={() => { setShowInviteModal(false); fetchPendingInvites() }}
           existingCount={totalSlots}
         />
+      )}
+
+      {/* Nudge modal */}
+      {nudgeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(26,10,16,0.4)' }} onClick={() => setNudgeTarget(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            {nudgeSent ? (
+              <div className="text-center py-4">
+                <p className="text-2xl mb-2">💪</p>
+                <p className="font-serif text-lg text-text">Nudge sent!</p>
+                <p className="text-sm text-text3 mt-1">{nudgeTarget.name} got your message.</p>
+              </div>
+            ) : (
+              <>
+                <p className="font-serif text-[18px] text-text mb-1">Nudge {nudgeTarget.name}</p>
+                <p className="text-xs text-text3 mb-4">Send a personal push notification to their phone.</p>
+                <textarea
+                  value={nudgeMsg}
+                  onChange={e => setNudgeMsg(e.target.value)}
+                  placeholder={`You've got this — don't give up!`}
+                  rows={3}
+                  maxLength={120}
+                  className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg resize-none placeholder-text3 mb-4"
+                />
+                <div className="flex gap-2">
+                  <button onClick={() => setNudgeTarget(null)} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={sendNudge} disabled={nudgeSending} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50">
+                    {nudgeSending ? 'Sending…' : 'Send nudge 💪'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
