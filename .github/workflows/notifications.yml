@@ -1,0 +1,48 @@
+name: Scheduled Notifications
+
+on:
+  schedule:
+    # Daily check-in reminder — 9am UTC every day
+    - cron: '0 9 * * *'
+    # Weekly goal reminder — Sunday 10am UTC
+    - cron: '0 10 * * 0'
+    # Midweek nudge to friends — Wednesday 3pm UTC
+    - cron: '0 15 * * 3'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  daily-reminder:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 9 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger daily reminder
+        run: |
+          curl -s -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/daily-reminder" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
+  weekly-reminder:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 10 * * 0'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger weekly goal reminder
+        run: |
+          curl -s -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/weekly-reminder" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
+  midweek-nudge:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 15 * * 3'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger midweek nudge
+        run: |
+          curl -s -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/midweek-nudge" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
