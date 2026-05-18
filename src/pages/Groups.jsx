@@ -177,11 +177,38 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
 
   useEffect(() => {
     async function loadFriends() {
-      const { data } = await supabase
+      // Load from friendships table
+      const { data: friendshipData } = await supabase
         .from('friendships')
         .select('friend_id, users!friendships_friend_id_fkey(id, name, avatar_initials, avatar_url)')
         .eq('user_id', userId)
-      setFriends(data?.map(f => f.users).filter(Boolean) || [])
+      const friendshipUsers = (friendshipData || []).map(f => f.users).filter(Boolean)
+
+      // Also load everyone the user has been in a group with
+      const { data: myGroups } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', userId)
+      const groupIds = (myGroups || []).map(g => g.group_id)
+
+      let groupUsers = []
+      if (groupIds.length > 0) {
+        const { data: groupMembersData } = await supabase
+          .from('group_members')
+          .select('user_id, users(id, name, avatar_initials, avatar_url)')
+          .in('group_id', groupIds)
+          .neq('user_id', userId)
+        groupUsers = (groupMembersData || []).map(m => m.users).filter(Boolean)
+      }
+
+      // Merge, deduplicate by id
+      const seen = new Set()
+      const merged = [...friendshipUsers, ...groupUsers].filter(u => {
+        if (!u || seen.has(u.id)) return false
+        seen.add(u.id)
+        return true
+      })
+      setFriends(merged)
     }
     loadFriends()
   }, [userId])
@@ -247,7 +274,7 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
               Add friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
             </label>
             {friends.length === 0 ? (
-              <p className="text-xs text-text3 italic">No friends yet — add them from the Friends tab first.</p>
+              <p className="text-xs text-text3 italic">No contacts yet — add friends from the Friends tab first.</p>
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {friends.slice(0, 5).map(f => (

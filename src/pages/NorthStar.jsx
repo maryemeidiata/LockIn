@@ -11,6 +11,7 @@ export default function NorthStar() {
   const [driftInsight, setDriftInsight] = useState(null)
   const [loading, setLoading] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     if (user) fetchHistory()
@@ -36,17 +37,21 @@ export default function NorthStar() {
 
   async function handleSave() {
     if (!draft.trim()) return
+    setSaveError('')
     setLoading(true)
     const { error } = await supabase
       .from('users')
       .update({ north_star: draft.trim() })
       .eq('id', user.id)
-    if (!error) {
-      // history table is optional — ignore if it doesn't exist
-      await supabase.from('north_star_history').insert({ user_id: user.id, north_star: draft.trim() })
-      await refreshProfile()
-      fetchHistory()
+    if (error) {
+      setSaveError(error.message || 'Could not save. Check your connection and try again.')
+      setLoading(false)
+      return
     }
+    // history table is optional — ignore if it doesn't exist
+    await supabase.from('north_star_history').insert({ user_id: user.id, north_star: draft.trim() })
+    await refreshProfile()
+    fetchHistory()
     setLoading(false)
     setEditing(false)
     setConfirm(false)
@@ -72,6 +77,7 @@ export default function NorthStar() {
             {confirm ? (
               <div className="bg-cream2 border border-border rounded-xl p-3 text-xs text-text2">
                 Updating your North Star will reset the drift detection baseline. Your old one is saved in history.
+                {saveError && <p className="mt-2 text-burg font-medium">{saveError}</p>}
                 <div className="flex gap-2 mt-3">
                   <button onClick={() => setConfirm(false)} className="flex-1 py-2 bg-cream3 text-text2 rounded-[10px] border border-border text-xs font-medium">
                     Go back
