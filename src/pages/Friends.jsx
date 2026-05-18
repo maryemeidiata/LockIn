@@ -18,6 +18,10 @@ export default function Friends() {
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [addTarget, setAddTarget] = useState(null) // person to add to group
+  const [myGroups, setMyGroups] = useState([])
+  const [addingToGroup, setAddingToGroup] = useState(null)
+  const [addSuccess, setAddSuccess] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const searchRef = useRef(null)
@@ -152,6 +156,57 @@ export default function Friends() {
       counts[m.from_user_id] = (counts[m.from_user_id] || 0) + 1
     }
     setUnreadCounts(counts)
+  }
+
+  async function fetchMyGroups() {
+    const { data } = await supabase
+      .from('group_members')
+      .select('group_id, groups(id, name)')
+      .eq('user_id', user.id)
+    setMyGroups(data?.map(m => m.groups).filter(Boolean) || [])
+  }
+
+  async function openAddToGroup(person, e) {
+    e.stopPropagation()
+    await fetchMyGroups()
+    setAddTarget(person)
+    setAddSuccess(null)
+  }
+
+  async function addToGroup(groupId) {
+    if (!addTarget) return
+    setAddingToGroup(groupId)
+
+    // Check if already a member
+    const { data: existing } = await supabase
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', addTarget.id)
+      .single()
+
+    if (existing) {
+      setAddSuccess({ groupId, msg: 'Already in this group' })
+      setAddingToGroup(null)
+      return
+    }
+
+    // Check group size
+    const { count } = await supabase
+      .from('group_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('group_id', groupId)
+
+    if (count >= 6) {
+      setAddSuccess({ groupId, msg: 'Group is full (6 max)' })
+      setAddingToGroup(null)
+      return
+    }
+
+    await supabase.from('group_members').insert({ group_id: groupId, user_id: addTarget.id })
+    setAddSuccess({ groupId, msg: 'Added!' })
+    setAddingToGroup(null)
+    setTimeout(() => { setAddTarget(null); setAddSuccess(null); fetchFriends() }, 1500)
   }
 
   async function searchUsers(query) {
@@ -334,14 +389,18 @@ export default function Friends() {
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-card overflow-hidden z-10">
             {searching && <p className="text-xs text-text3 px-4 py-2">Searching…</p>}
             {searchResults.map(person => (
-              <button
-                key={person.id}
-                onClick={() => openThreadFromSearch(person)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-cream2 transition-colors text-left border-b border-cream2 last:border-0"
-              >
-                <Avatar userId={person.id} avatarUrl={person.avatar_url} initials={person.avatar_initials} size="sm" />
-                <p className="text-sm font-medium text-text">{person.name}</p>
-              </button>
+              <div key={person.id} className="flex items-center gap-2 px-4 py-3 border-b border-cream2 last:border-0 hover:bg-cream2 transition-colors">
+                <button onClick={() => openThreadFromSearch(person)} className="flex items-center gap-3 flex-1 text-left">
+                  <Avatar userId={person.id} avatarUrl={person.avatar_url} initials={person.avatar_initials} size="sm" />
+                  <p className="text-sm font-medium text-text">{person.name}</p>
+                </button>
+                <button
+                  onClick={e => openAddToGroup(person, e)}
+                  className="text-[11px] font-medium text-burg border border-burg rounded-lg px-2.5 py-1 hover:bg-burg hover:text-cream transition-colors flex-shrink-0"
+                >
+                  + Group
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -398,6 +457,40 @@ export default function Friends() {
               </button>
             )
           })}
+        </div>
+      )}
+
+      {/* Add to group modal */}
+      {addTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(26,10,16,0.4)' }} onClick={() => setAddTarget(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <p className="font-serif text-[18px] text-text mb-1">Add {addTarget.name?.split(' ')[0]} to a group</p>
+            <p className="text-xs text-text3 mb-4">Pick which group to add them to.</p>
+            {myGroups.length === 0 ? (
+              <p className="text-sm text-text3">You don't have any groups yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {myGroups.map(g => {
+                  const result = addSuccess?.groupId === g.id
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => addToGroup(g.id)}
+                      disabled={!!addingToGroup || !!addSuccess}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-cream2 hover:bg-cream3 border border-border rounded-xl text-sm font-medium text-text transition-colors disabled:opacity-60"
+                    >
+                      <span>{g.name}</span>
+                      {addingToGroup === g.id && <span className="text-xs text-text3">Adding…</span>}
+                      {result && <span className={`text-xs font-semibold ${addSuccess.msg === 'Added!' ? 'text-burg' : 'text-text3'}`}>{addSuccess.msg}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <button onClick={() => setAddTarget(null)} className="mt-4 w-full py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>
