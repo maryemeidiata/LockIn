@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getCurrentWeekStartStr, buildDayStates, getDayIndexFromTimestamp } from '../lib/weekUtils'
@@ -10,20 +10,71 @@ export default function Friends() {
   const { user } = useAuth()
   const [friends, setFriends] = useState([])
   const [loading, setLoading] = useState(true)
-  const [nudgeTarget, setNudgeTarget] = useState(null)
-  const [nudgeMsg, setNudgeMsg] = useState('')
-  const [nudgeSending, setNudgeSending] = useState(false)
-  const [nudgeSent, setNudgeSent] = useState(false)
+  const [activeThread, setActiveThread] = useState(null) // friend object
+  const [messages, setMessages] = useState([])
+  const [newMsg, setNewMsg] = useState('')
+  const [sending, setSending] = useState(false)
+  const [unreadCounts, setUnreadCounts] = useState({})
+  const bottomRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
-    if (user) fetchFriends()
+    if (user) {
+      fetchFriends()
+      fetchUnreadCounts()
+    }
   }, [user])
+
+  // Real-time subscription for incoming messages
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase
+      .channel('messages')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `to_user_id=eq.${user.id}`,
+      }, payload => {
+        const msg = payload.new
+        // If this thread is open, add to messages + mark read
+        if (activeThread?.id === msg.from_user_id) {
+          setMessages(prev => [...prev, msg])
+          markRead(msg.from_user_id)
+        } else {
+          // Update unread badge
+          setUnreadCounts(prev => ({
+            ...prev,
+            [msg.from_user_id]: (prev[msg.from_user_id] || 0) + 1,
+          }))
+        }
+        scrollToBottom()
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [user, activeThread])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  // Load thread when activeThread changes
+  useEffect(() => {
+    if (activeThread) {
+      loadThread(activeThread.id)
+      inputRef.current?.focus()
+    }
+  }, [activeThread])
+
+  function scrollToBottom() {
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
 
   async function fetchFriends() {
     setLoading(true)
     const weekStart = getCurrentWeekStartStr()
 
-    // Get all groups the user belongs to
     const { data: memberships } = await supabase
       .from('group_members')
       .select('group_id, groups(id, name)')
@@ -33,16 +84,14 @@ export default function Friends() {
 
     const groupIds = memberships.map(m => m.group_id)
 
-    // Get all members across those groups (excluding self)
     const { data: allMembers } = await supabase
       .from('group_members')
-      .select('user_id, group_id, users(id, name, avatar_url, avatar_initials, north_star)')
+      .select('user_id, group_id, users(id, name, avatar_url, avatar_initials)')
       .in('group_id', groupIds)
       .neq('user_id', user.id)
 
     if (!allMembers?.length) { setLoading(false); return }
 
-    // Deduplicate by user_id, but keep track of shared groups
     const friendMap = {}
     for (const m of allMembers) {
       const u = m.users
@@ -54,35 +103,24 @@ export default function Friends() {
       if (group) friendMap[u.id].groups.push(group.name)
     }
 
-    // Get commitments + checkins for this week for each friend
+    // Commitments + checkins
     const friendIds = Object.keys(friendMap)
     const { data: commitments } = await supabase
       .from('commitments')
-      .select('id, user_id, commitment_text, group_id')
+      .select('id, user_id, commitment_text')
       .in('user_id', friendIds)
       .in('group_id', groupIds)
       .eq('week_start', weekStart)
 
     const commitmentIds = commitments?.map(c => c.id) || []
-    let checkins = []
-    let excuses = []
-
+    let checkins = [], excuses = []
     if (commitmentIds.length) {
-      const { data: ci } = await supabase
-        .from('checkins')
-        .select('commitment_id, user_id, day_of_week')
-        .in('commitment_id', commitmentIds)
+      const { data: ci } = await supabase.from('checkins').select('commitment_id, user_id, day_of_week').in('commitment_id', commitmentIds)
+      const { data: ex } = await supabase.from('missed_submissions').select('user_id, submitted_at, status').in('commitment_id', commitmentIds).in('status', ['approved', 'rejected'])
       checkins = ci || []
-
-      const { data: ex } = await supabase
-        .from('missed_submissions')
-        .select('user_id, submitted_at, status')
-        .in('commitment_id', commitmentIds)
-        .in('status', ['approved', 'rejected'])
       excuses = ex || []
     }
 
-    // Attach commitment + day states to each friend
     for (const fid of friendIds) {
       const commitment = commitments?.find(c => c.user_id === fid)
       if (commitment) {
@@ -98,33 +136,155 @@ export default function Friends() {
     setLoading(false)
   }
 
-  async function sendNudge() {
-    if (!nudgeTarget) return
-    setNudgeSending(true)
-    const { data: { session } } = await supabase.auth.getSession()
-    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nudge-friend`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ to_user_id: nudgeTarget.id, message: nudgeMsg.trim() || undefined }),
-    })
-    setNudgeSending(false)
-    setNudgeSent(true)
-    setTimeout(() => {
-      setNudgeTarget(null)
-      setNudgeMsg('')
-      setNudgeSent(false)
-    }, 2000)
+  async function fetchUnreadCounts() {
+    const { data } = await supabase
+      .from('messages')
+      .select('from_user_id')
+      .eq('to_user_id', user.id)
+      .eq('read', false)
+
+    const counts = {}
+    for (const m of data || []) {
+      counts[m.from_user_id] = (counts[m.from_user_id] || 0) + 1
+    }
+    setUnreadCounts(counts)
   }
+
+  async function loadThread(friendId) {
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(from_user_id.eq.${user.id},to_user_id.eq.${friendId}),and(from_user_id.eq.${friendId},to_user_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
+
+    setMessages(data || [])
+    await markRead(friendId)
+    setUnreadCounts(prev => ({ ...prev, [friendId]: 0 }))
+  }
+
+  async function markRead(fromId) {
+    await supabase
+      .from('messages')
+      .update({ read: true })
+      .eq('to_user_id', user.id)
+      .eq('from_user_id', fromId)
+      .eq('read', false)
+  }
+
+  async function sendMessage(e) {
+    e?.preventDefault()
+    const content = newMsg.trim()
+    if (!content || !activeThread || sending) return
+    setSending(true)
+    setNewMsg('')
+
+    const { data } = await supabase
+      .from('messages')
+      .insert({ from_user_id: user.id, to_user_id: activeThread.id, content })
+      .select()
+      .single()
+
+    if (data) setMessages(prev => [...prev, data])
+    setSending(false)
+    inputRef.current?.focus()
+  }
+
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0)
 
   if (loading) return <LoadingPulse lines={4} />
 
+  // Thread view
+  if (activeThread) {
+    return (
+      <div className="flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={() => { setActiveThread(null); setMessages([]) }}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream2 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+          </button>
+          <Avatar userId={activeThread.id} avatarUrl={activeThread.avatar_url} initials={activeThread.avatar_initials} size="md" />
+          <div>
+            <p className="font-medium text-text text-sm">{activeThread.name}</p>
+            <p className="text-[10px] text-text3">{activeThread.groups?.join(', ')}</p>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-2 pb-2">
+          {messages.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-sm text-text3">No messages yet.</p>
+              <p className="text-xs text-text3 mt-1">Say something to {activeThread.name?.split(' ')[0]} 👋</p>
+            </div>
+          )}
+          {messages.map((msg, i) => {
+            const isMe = msg.from_user_id === user.id
+            const showTime = i === 0 || new Date(msg.created_at) - new Date(messages[i - 1].created_at) > 5 * 60 * 1000
+            return (
+              <div key={msg.id}>
+                {showTime && (
+                  <p className="text-center text-[10px] text-text3 my-2">
+                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                <div className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
+                      isMe
+                        ? 'bg-burg text-cream rounded-br-sm'
+                        : 'bg-white border border-border text-text rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <form onSubmit={sendMessage} className="flex gap-2 pt-3 border-t border-cream2">
+          <input
+            ref={inputRef}
+            value={newMsg}
+            onChange={e => setNewMsg(e.target.value)}
+            placeholder={`Message ${activeThread.name?.split(' ')[0]}…`}
+            className="flex-1 border border-border rounded-full px-4 py-2.5 text-sm text-text focus:outline-none focus:border-burg placeholder-text3"
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+          />
+          <button
+            type="submit"
+            disabled={!newMsg.trim() || sending}
+            className="w-10 h-10 bg-burg text-cream rounded-full flex items-center justify-center hover:bg-burg-light transition-colors disabled:opacity-40 flex-shrink-0"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22,2 15,22 11,13 2,9"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    )
+  }
+
+  // Friends list
   return (
     <div>
-      <h1 className="font-serif text-[26px] text-text tracking-tight mb-6">Friends</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-serif text-[26px] text-text tracking-tight">Friends</h1>
+        {totalUnread > 0 && (
+          <span className="text-xs font-semibold text-cream bg-burg px-2.5 py-1 rounded-full">
+            {totalUnread} unread
+          </span>
+        )}
+      </div>
 
       {friends.length === 0 ? (
         <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
@@ -141,75 +301,37 @@ export default function Friends() {
         </div>
       ) : (
         <div className="space-y-2">
-          {friends.map(friend => (
-            <div key={friend.id} className="bg-white border border-border rounded-xl shadow-card px-4 py-3.5 flex items-center gap-3">
-              <Avatar userId={friend.id} avatarUrl={friend.avatar_url} initials={friend.avatar_initials} size="md" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text">{friend.name}</p>
-                <p className="text-xs text-text3 truncate">
-                  {friend.commitment_text || <span className="italic">No commitment this week</span>}
-                </p>
-                <p className="text-[10px] text-text3 mt-0.5 truncate">{friend.groups.join(', ')}</p>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <DayTrack states={friend.dayStates} />
-                <button
-                  onClick={() => { setNudgeTarget({ id: friend.id, name: friend.name?.split(' ')[0] }); setNudgeMsg('') }}
-                  className="text-[11px] font-medium text-burg hover:underline transition-colors"
-                >
-                  Nudge 💪
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Nudge modal */}
-      {nudgeTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-          style={{ background: 'rgba(26,10,16,0.4)' }}
-          onClick={() => setNudgeTarget(null)}
-        >
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            {nudgeSent ? (
-              <div className="text-center py-4">
-                <p className="text-3xl mb-2">💪</p>
-                <p className="font-serif text-lg text-text">Nudge sent!</p>
-                <p className="text-sm text-text3 mt-1">{nudgeTarget.name} got your message.</p>
-              </div>
-            ) : (
-              <>
-                <p className="font-serif text-[18px] text-text mb-1">Nudge {nudgeTarget.name}</p>
-                <p className="text-xs text-text3 mb-4">Send a push notification straight to their phone.</p>
-                <textarea
-                  value={nudgeMsg}
-                  onChange={e => setNudgeMsg(e.target.value)}
-                  placeholder="You've got this — don't give up!"
-                  rows={3}
-                  maxLength={120}
-                  className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg resize-none placeholder-text3 mb-1"
-                />
-                <p className="text-[10px] text-text3 text-right mb-4">{nudgeMsg.length}/120</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setNudgeTarget(null)}
-                    className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={sendNudge}
-                    disabled={nudgeSending}
-                    className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
-                  >
-                    {nudgeSending ? 'Sending…' : 'Send 💪'}
-                  </button>
+          {friends.map(friend => {
+            const unread = unreadCounts[friend.id] || 0
+            return (
+              <button
+                key={friend.id}
+                onClick={() => setActiveThread(friend)}
+                className="w-full bg-white border border-border rounded-xl shadow-card px-4 py-3.5 flex items-center gap-3 hover:bg-cream2 transition-colors text-left"
+              >
+                <div className="relative flex-shrink-0">
+                  <Avatar userId={friend.id} avatarUrl={friend.avatar_url} initials={friend.avatar_initials} size="md" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-burg text-cream text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {unread}
+                    </span>
+                  )}
                 </div>
-              </>
-            )}
-          </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${unread > 0 ? 'font-semibold text-text' : 'font-medium text-text'}`}>
+                    {friend.name}
+                  </p>
+                  <p className="text-xs text-text3 truncate">
+                    {friend.commitment_text || <span className="italic">No commitment this week</span>}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  <DayTrack states={friend.dayStates} />
+                  <p className="text-[10px] text-text3">{friend.groups.join(', ')}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

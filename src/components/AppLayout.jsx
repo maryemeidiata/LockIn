@@ -8,11 +8,40 @@ import { supabase } from '../lib/supabase'
 export default function AppLayout() {
   const { user } = useAuth()
   const [pendingVotes, setPendingVotes] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
 
   useEffect(() => {
     if (!user) return
     fetchCounts()
+    fetchUnread()
+
+    const channel = supabase
+      .channel('unread-badge')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `to_user_id=eq.${user.id}`,
+      }, () => setUnreadMessages(n => n + 1))
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `to_user_id=eq.${user.id}`,
+      }, () => fetchUnread())
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [user])
+
+  async function fetchUnread() {
+    const { count } = await supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('to_user_id', user.id)
+      .eq('read', false)
+    setUnreadMessages(count || 0)
+  }
 
   async function fetchCounts() {
     const { data: myGroups } = await supabase
@@ -48,7 +77,7 @@ export default function AppLayout() {
     <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
       {/* Desktop top nav */}
       <div className="hidden md:block">
-        <TopNav pendingVotes={pendingVotes} />
+        <TopNav pendingVotes={pendingVotes} unreadMessages={unreadMessages} />
       </div>
 
       {/* Main content */}
@@ -60,7 +89,7 @@ export default function AppLayout() {
 
       {/* Mobile bottom nav */}
       <div className="md:hidden">
-        <BottomNav />
+        <BottomNav unreadMessages={unreadMessages} />
       </div>
     </div>
   )

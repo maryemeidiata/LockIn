@@ -47,7 +47,7 @@ const TABS = [
   },
 ]
 
-export default function BottomNav() {
+export default function BottomNav({ unreadMessages = 0 }) {
   return (
     <nav
       style={{
@@ -72,8 +72,20 @@ export default function BottomNav() {
               alignItems: 'center', gap: 4,
               padding: '10px 0',
               color: isActive ? 'var(--burg)' : 'var(--text3)',
+              position: 'relative',
             }}>
-              {tab.icon}
+              <div style={{ position: 'relative' }}>
+                {tab.icon}
+                {tab.to === '/friends' && unreadMessages > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -4, right: -6,
+                    background: 'var(--burg)', color: 'white',
+                    fontSize: 8, fontWeight: 700,
+                    width: 14, height: 14, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{unreadMessages > 9 ? '9+' : unreadMessages}</span>
+                )}
+              </div>
               <span style={{ fontSize: 9, fontWeight: isActive ? 500 : 400 }}>{tab.label}</span>
             </div>
           )}

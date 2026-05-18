@@ -20,7 +20,7 @@ const DROPDOWN_LINKS = [
   { to: '/profile', label: 'Profile' },
 ]
 
-export default function TopNav({ pendingVotes = 0 }) {
+export default function TopNav({ pendingVotes = 0, unreadMessages = 0 }) {
   const { profile, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -72,7 +72,7 @@ export default function TopNav({ pendingVotes = 0 }) {
             >
               {({ isActive }) => (
                 <span style={{
-                  display: 'block',
+                  display: 'flex', alignItems: 'center', gap: 5,
                   padding: '6px 12px',
                   borderRadius: 8,
                   fontSize: 13,
@@ -84,6 +84,13 @@ export default function TopNav({ pendingVotes = 0 }) {
                   whiteSpace: 'nowrap',
                 }}>
                   {link.label}
+                  {link.to === '/friends' && unreadMessages > 0 && (
+                    <span style={{
+                      background: 'var(--burg)', color: 'white',
+                      fontSize: 9, fontWeight: 600,
+                      padding: '1px 5px', borderRadius: 10, lineHeight: '14px',
+                    }}>{unreadMessages}</span>
+                  )}
                 </span>
               )}
             </NavLink>
