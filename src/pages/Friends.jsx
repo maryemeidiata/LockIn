@@ -274,7 +274,7 @@ export default function Friends() {
   // Thread view
   if (activeThread) {
     return (
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 120px)' }}>
+      <div className="flex flex-col" style={{ height: 'calc(100vh - 160px)', minHeight: 400 }}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <button
