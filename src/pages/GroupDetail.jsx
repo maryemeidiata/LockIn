@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getCurrentWeekStartStr, buildDayStates, getDayIndex, getDayIndexFromTimestamp } from '../lib/weekUtils'
@@ -9,11 +9,13 @@ import CommitmentForm from '../components/CommitmentForm'
 import CheckInButton from '../components/CheckInButton'
 import LoadingPulse from '../components/ui/LoadingPulse'
 import CardTag from '../components/ui/CardTag'
+import { clearCache } from '../lib/cache'
 
 const MAX_MEMBERS = 6
 
 export default function GroupDetail() {
   const { id: groupId } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [group, setGroup] = useState(null)
   const [members, setMembers] = useState([])
@@ -28,6 +30,8 @@ export default function GroupDetail() {
   const [nudgeMsg, setNudgeMsg] = useState('')
   const [nudgeSending, setNudgeSending] = useState(false)
   const [nudgeSent, setNudgeSent] = useState(false)
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   const weekStart = getCurrentWeekStartStr()
   const dayIdx = getDayIndex()
@@ -116,7 +120,7 @@ export default function GroupDetail() {
   async function fetchPendingInvites() {
     const { data } = await supabase
       .from('invitations')
-      .select('id, invited_email, created_at')
+      .select('id, invited_email, invited_user_id, created_at, users!invitations_invited_user_id_fkey(name)')
       .eq('group_id', groupId)
       .eq('status', 'pending')
     setPendingInvites(data || [])
@@ -141,6 +145,14 @@ export default function GroupDetail() {
   async function cancelInvite(inviteId) {
     await supabase.from('invitations').update({ status: 'cancelled' }).eq('id', inviteId)
     fetchPendingInvites()
+  }
+
+  async function leaveGroup() {
+    setLeaving(true)
+    await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', user.id)
+    clearCache('groups')
+    clearCache('overview')
+    navigate('/groups')
   }
 
   async function sendNudge() {
@@ -178,14 +190,22 @@ export default function GroupDetail() {
           <h1 className="font-serif text-[26px] text-text tracking-tight">{group?.name}</h1>
           <CardTag label={`${members.length} members`} variant="group" />
         </div>
-        {canInvite && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowInviteModal(true)}
-            className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
+            onClick={() => setShowLeaveConfirm(true)}
+            className="px-3 py-2 text-xs font-medium text-text3 border border-border rounded-[10px] hover:border-burg hover:text-burg transition-colors"
           >
-            Invite
+            Leave
           </button>
-        )}
+          {canInvite && (
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
+            >
+              Invite
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Commitment prompt when none set */}
@@ -285,7 +305,10 @@ export default function GroupDetail() {
           <div className="space-y-2">
             {pendingInvites.map(inv => (
               <div key={inv.id} className="flex items-center justify-between py-1.5">
-                <p className="text-sm text-text3">{inv.invited_email}</p>
+                <p className="text-sm text-text3">
+                  {inv.users?.name || inv.invited_email || 'Invited user'}
+                  <span className="ml-2 text-[10px] text-text3 italic">pending</span>
+                </p>
                 <button
                   onClick={() => cancelInvite(inv.id)}
                   className="text-xs text-text3 hover:text-burg underline"
@@ -313,6 +336,31 @@ export default function GroupDetail() {
           onInvited={() => { setShowInviteModal(false); fetchPendingInvites() }}
           existingCount={totalSlots}
         />
+      )}
+
+      {/* Leave group confirm */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" onClick={() => setShowLeaveConfirm(false)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="font-serif text-xl text-text mb-2">Leave {group?.name}?</h2>
+            <p className="text-sm text-text3 mb-5">Your commitments and check-in history will remain, but you'll no longer be part of this group.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={leaveGroup}
+                disabled={leaving}
+                className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
+              >
+                {leaving ? 'Leaving...' : 'Leave group'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Nudge modal */}

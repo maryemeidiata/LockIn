@@ -17,9 +17,13 @@ export default function Groups() {
   const [groups, setGroups] = useState(cached ?? [])
   const [loading, setLoading] = useState(!cached)
   const [showModal, setShowModal] = useState(false)
+  const [pendingInvites, setPendingInvites] = useState([])
 
   useEffect(() => {
-    if (user) fetchGroups()
+    if (user) {
+      fetchGroups()
+      fetchPendingInvites()
+    }
   }, [user])
 
   async function fetchGroups() {
@@ -83,6 +87,24 @@ export default function Groups() {
     setLoading(false)
   }
 
+  async function fetchPendingInvites() {
+    const { data } = await supabase
+      .from('invitations')
+      .select('id, group_id, groups(name), invited_by, users!invitations_invited_by_fkey(name)')
+      .eq('invited_user_id', user.id)
+      .eq('status', 'pending')
+    setPendingInvites(data || [])
+  }
+
+  async function respondToInvite(inviteId, groupId, accept) {
+    if (accept) {
+      await supabase.from('group_members').insert({ group_id: groupId, user_id: user.id })
+    }
+    await supabase.from('invitations').update({ status: accept ? 'accepted' : 'declined' }).eq('id', inviteId)
+    fetchPendingInvites()
+    if (accept) { clearCache('groups'); clearCache('overview'); fetchGroups() }
+  }
+
   if (loading) return <div className="space-y-4"><LoadingPulse lines={3} /></div>
 
   return (
@@ -100,6 +122,39 @@ export default function Groups() {
           Create group
         </button>
       </div>
+
+      {/* Pending invitations */}
+      {pendingInvites.length > 0 && (
+        <div className="space-y-3 mb-5">
+          {pendingInvites.map(inv => (
+            <div key={inv.id} className="bg-white border border-burg/30 rounded-xl shadow-card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-burg uppercase tracking-wider mb-0.5">Group invitation</p>
+                  <p className="text-sm font-medium text-text">{inv.groups?.name}</p>
+                  <p className="text-xs text-text3 mt-0.5">
+                    Invited by {inv.users?.name || 'someone'}
+                  </p>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => respondToInvite(inv.id, inv.group_id, false)}
+                    className="px-3 py-1.5 text-xs font-medium text-text2 bg-cream2 border border-border rounded-[8px] hover:bg-cream3 transition-colors"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => respondToInvite(inv.id, inv.group_id, true)}
+                    className="px-3 py-1.5 text-xs font-medium text-cream bg-burg rounded-[8px] hover:bg-burg-light transition-colors"
+                  >
+                    Join
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {groups.length >= MAX_GROUPS && (
         <div className="bg-cream2 border border-border rounded-xl p-4 mb-5 text-sm text-text2">
@@ -239,12 +294,17 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
 
     if (gErr) { setError(gErr.message); setLoading(false); return }
 
-    // Add creator
+    // Add creator directly
     await supabase.from('group_members').insert({ group_id: group.id, user_id: userId })
 
-    // Add selected friends directly
+    // Send invitations to selected friends — they'll accept/decline from their Groups page
     for (const friendId of selected) {
-      await supabase.from('group_members').insert({ group_id: group.id, user_id: friendId })
+      await supabase.from('invitations').insert({
+        group_id: group.id,
+        invited_by: userId,
+        invited_user_id: friendId,
+        status: 'pending',
+      })
     }
 
     sessionStorage.removeItem('cg_name')
@@ -271,8 +331,11 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
 
           <div>
             <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-2">
-              Add friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
+              Invite friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
             </label>
+            {selected.size > 0 && (
+              <p className="text-[11px] text-text3 mb-2 italic">They'll receive an invitation to join — they can accept or decline.</p>
+            )}
             {friends.length === 0 ? (
               <p className="text-xs text-text3 italic">No contacts yet — add friends from the Friends tab first.</p>
             ) : (
