@@ -109,7 +109,7 @@ function StepWelcome({ onNext }) {
           {
             icon: '🧭',
             title: 'Set your North Star',
-            desc: 'The honest reason behind everything you're working on.',
+            desc: "The honest reason behind everything you're working on.",
           },
           {
             icon: '👥',
@@ -119,7 +119,7 @@ function StepWelcome({ onNext }) {
           {
             icon: '✅',
             title: 'Check in every day',
-            desc: 'One tap. Your group sees it. That's the whole point.',
+            desc: "One tap. Your group sees it. That's the whole point.",
           },
         ].map(item => (
           <div key={item.title} className="flex items-start gap-4 bg-white border border-border rounded-xl p-4 shadow-card">
