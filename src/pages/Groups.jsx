@@ -170,28 +170,33 @@ function GroupDetailCard({ group }) {
 
 function CreateGroupModal({ onClose, onCreated, userId }) {
   const [name, setName] = useState(() => sessionStorage.getItem('cg_name') || '')
-  const [emails, setEmails] = useState(() => {
-    try { return JSON.parse(sessionStorage.getItem('cg_emails')) || [''] } catch { return [''] }
-  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [friends, setFriends] = useState([])
+  const [selected, setSelected] = useState(new Set())
+
+  useEffect(() => {
+    async function loadFriends() {
+      const { data } = await supabase
+        .from('friendships')
+        .select('friend_id, users!friendships_friend_id_fkey(id, name, avatar_initials, avatar_url)')
+        .eq('user_id', userId)
+      setFriends(data?.map(f => f.users).filter(Boolean) || [])
+    }
+    loadFriends()
+  }, [userId])
 
   function handleNameChange(val) {
     setName(val)
     sessionStorage.setItem('cg_name', val)
   }
 
-  function handleEmailChange(i, val) {
-    const next = [...emails]
-    next[i] = val
-    setEmails(next)
-    sessionStorage.setItem('cg_emails', JSON.stringify(next))
-  }
-
-  function handleAddEmail() {
-    const next = [...emails, '']
-    setEmails(next)
-    sessionStorage.setItem('cg_emails', JSON.stringify(next))
+  function toggleFriend(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
   }
 
   async function handleCreate(e) {
@@ -207,19 +212,15 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
 
     if (gErr) { setError(gErr.message); setLoading(false); return }
 
+    // Add creator
     await supabase.from('group_members').insert({ group_id: group.id, user_id: userId })
 
-    const validEmails = emails.filter(e => e.trim())
-    for (const email of validEmails) {
-      await supabase.from('invitations').insert({
-        group_id: group.id,
-        invited_by: userId,
-        invited_email: email.trim().toLowerCase(),
-      })
+    // Add selected friends directly
+    for (const friendId of selected) {
+      await supabase.from('group_members').insert({ group_id: group.id, user_id: friendId })
     }
 
     sessionStorage.removeItem('cg_name')
-    sessionStorage.removeItem('cg_emails')
     setLoading(false)
     onCreated()
   }
@@ -242,20 +243,34 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-1.5">Invite by email (optional)</label>
-            {emails.map((email, i) => (
-              <input
-                key={i}
-                value={email}
-                onChange={e => handleEmailChange(i, e.target.value)}
-                placeholder="friend@example.com"
-                className="w-full border border-border rounded-xl px-4 py-2.5 text-sm text-text focus:outline-none focus:border-burg placeholder-text3 mb-2"
-              />
-            ))}
-            {emails.length < 5 && (
-              <button type="button" onClick={handleAddEmail} className="text-xs text-burg hover:underline">
-                + Add another email
-              </button>
+            <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-2">
+              Add friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
+            </label>
+            {friends.length === 0 ? (
+              <p className="text-xs text-text3 italic">No friends yet — add them from the Friends tab first.</p>
+            ) : (
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {friends.slice(0, 5).map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => toggleFriend(f.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors text-left ${
+                      selected.has(f.id)
+                        ? 'border-burg bg-cream2'
+                        : 'border-border hover:bg-cream2'
+                    }`}
+                  >
+                    <Avatar userId={f.id} initials={f.avatar_initials} avatarUrl={f.avatar_url} size="sm" />
+                    <p className="text-sm text-text flex-1">{f.name}</p>
+                    {selected.has(f.id) && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-burg flex-shrink-0">
+                        <polyline points="20,6 9,17 4,12"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 

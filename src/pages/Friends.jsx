@@ -18,10 +18,7 @@ export default function Friends() {
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
-  const [addTarget, setAddTarget] = useState(null) // person to add to group
-  const [myGroups, setMyGroups] = useState([])
-  const [addingToGroup, setAddingToGroup] = useState(null)
-  const [addSuccess, setAddSuccess] = useState(null)
+  const [addSuccess, setAddSuccess] = useState(null) // { id, msg }
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const searchRef = useRef(null)
@@ -83,32 +80,41 @@ export default function Friends() {
     setLoading(true)
     const weekStart = getCurrentWeekStartStr()
 
+    // Pull from friendships table
+    const { data: friendships } = await supabase
+      .from('friendships')
+      .select('friend_id, users!friendships_friend_id_fkey(id, name, avatar_url, avatar_initials)')
+      .eq('user_id', user.id)
+
+    // Also include group members as implicit friends
     const { data: memberships } = await supabase
       .from('group_members')
       .select('group_id, groups(id, name)')
       .eq('user_id', user.id)
 
-    if (!memberships?.length) { setLoading(false); return }
-
-    const groupIds = memberships.map(m => m.group_id)
-
-    const { data: allMembers } = await supabase
+    const groupIds = memberships?.map(m => m.group_id) || []
+    const { data: allMembers } = groupIds.length ? await supabase
       .from('group_members')
       .select('user_id, group_id, users(id, name, avatar_url, avatar_initials)')
       .in('group_id', groupIds)
-      .neq('user_id', user.id)
-
-    if (!allMembers?.length) { setLoading(false); return }
+      .neq('user_id', user.id) : { data: [] }
 
     const friendMap = {}
-    for (const m of allMembers) {
+
+    // Add friendship-based friends
+    for (const f of friendships || []) {
+      const u = f.users
+      if (!u) continue
+      if (!friendMap[u.id]) friendMap[u.id] = { ...u, groups: [], dayStates: Array(7).fill('empty'), commitment_text: '' }
+    }
+
+    // Add group members
+    for (const m of allMembers || []) {
       const u = m.users
       if (!u) continue
-      const group = memberships.find(g => g.group_id === m.group_id)?.groups
-      if (!friendMap[u.id]) {
-        friendMap[u.id] = { ...u, groups: [], dayStates: Array(7).fill('empty'), commitment_text: '' }
-      }
-      if (group) friendMap[u.id].groups.push(group.name)
+      const group = memberships?.find(g => g.group_id === m.group_id)?.groups
+      if (!friendMap[u.id]) friendMap[u.id] = { ...u, groups: [], dayStates: Array(7).fill('empty'), commitment_text: '' }
+      if (group && !friendMap[u.id].groups.includes(group.name)) friendMap[u.id].groups.push(group.name)
     }
 
     // Commitments + checkins
@@ -158,55 +164,13 @@ export default function Friends() {
     setUnreadCounts(counts)
   }
 
-  async function fetchMyGroups() {
-    const { data } = await supabase
-      .from('group_members')
-      .select('group_id, groups(id, name)')
-      .eq('user_id', user.id)
-    setMyGroups(data?.map(m => m.groups).filter(Boolean) || [])
-  }
-
-  async function openAddToGroup(person, e) {
+  async function addFriend(person, e) {
     e.stopPropagation()
-    await fetchMyGroups()
-    setAddTarget(person)
-    setAddSuccess(null)
-  }
-
-  async function addToGroup(groupId) {
-    if (!addTarget) return
-    setAddingToGroup(groupId)
-
-    // Check if already a member
-    const { data: existing } = await supabase
-      .from('group_members')
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('user_id', addTarget.id)
-      .single()
-
-    if (existing) {
-      setAddSuccess({ groupId, msg: 'Already in this group' })
-      setAddingToGroup(null)
-      return
-    }
-
-    // Check group size
-    const { count } = await supabase
-      .from('group_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('group_id', groupId)
-
-    if (count >= 6) {
-      setAddSuccess({ groupId, msg: 'Group is full (6 max)' })
-      setAddingToGroup(null)
-      return
-    }
-
-    await supabase.from('group_members').insert({ group_id: groupId, user_id: addTarget.id })
-    setAddSuccess({ groupId, msg: 'Added!' })
-    setAddingToGroup(null)
-    setTimeout(() => { setAddTarget(null); setAddSuccess(null); fetchFriends() }, 1500)
+    // Insert both directions for bidirectional friendship
+    await supabase.from('friendships').upsert({ user_id: user.id, friend_id: person.id }, { onConflict: 'user_id,friend_id' })
+    await supabase.from('friendships').upsert({ user_id: person.id, friend_id: user.id }, { onConflict: 'user_id,friend_id' })
+    setAddSuccess({ id: person.id, msg: 'Friend added!' })
+    setTimeout(() => { setAddSuccess(null); fetchFriends() }, 1500)
   }
 
   async function searchUsers(query) {
@@ -394,12 +358,16 @@ export default function Friends() {
                   <Avatar userId={person.id} avatarUrl={person.avatar_url} initials={person.avatar_initials} size="sm" />
                   <p className="text-sm font-medium text-text">{person.name}</p>
                 </button>
-                <button
-                  onClick={e => openAddToGroup(person, e)}
-                  className="text-[11px] font-medium text-burg border border-burg rounded-lg px-2.5 py-1 hover:bg-burg hover:text-cream transition-colors flex-shrink-0"
-                >
-                  + Group
-                </button>
+                {addSuccess?.id === person.id ? (
+                  <span className="text-[11px] font-semibold text-burg">{addSuccess.msg}</span>
+                ) : (
+                  <button
+                    onClick={e => addFriend(person, e)}
+                    className="text-[11px] font-medium text-burg border border-burg rounded-lg px-2.5 py-1 hover:bg-burg hover:text-cream transition-colors flex-shrink-0"
+                  >
+                    + Add
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -460,39 +428,6 @@ export default function Friends() {
         </div>
       )}
 
-      {/* Add to group modal */}
-      {addTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: 'rgba(26,10,16,0.4)' }} onClick={() => setAddTarget(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-            <p className="font-serif text-[18px] text-text mb-1">Add {addTarget.name?.split(' ')[0]} to a group</p>
-            <p className="text-xs text-text3 mb-4">Pick which group to add them to.</p>
-            {myGroups.length === 0 ? (
-              <p className="text-sm text-text3">You don't have any groups yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {myGroups.map(g => {
-                  const result = addSuccess?.groupId === g.id
-                  return (
-                    <button
-                      key={g.id}
-                      onClick={() => addToGroup(g.id)}
-                      disabled={!!addingToGroup || !!addSuccess}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-cream2 hover:bg-cream3 border border-border rounded-xl text-sm font-medium text-text transition-colors disabled:opacity-60"
-                    >
-                      <span>{g.name}</span>
-                      {addingToGroup === g.id && <span className="text-xs text-text3">Adding…</span>}
-                      {result && <span className={`text-xs font-semibold ${addSuccess.msg === 'Added!' ? 'text-burg' : 'text-text3'}`}>{addSuccess.msg}</span>}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-            <button onClick={() => setAddTarget(null)} className="mt-4 w-full py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
