@@ -37,13 +37,19 @@ export default function NorthStar() {
   async function handleSave() {
     if (!draft.trim()) return
     setLoading(true)
-    await supabase.from('users').update({ north_star: draft.trim() }).eq('id', user.id)
-    await supabase.from('north_star_history').insert({ user_id: user.id, north_star: draft.trim() })
-    await refreshProfile()
+    const { error } = await supabase
+      .from('users')
+      .update({ north_star: draft.trim() })
+      .eq('id', user.id)
+    if (!error) {
+      // history table is optional — ignore if it doesn't exist
+      await supabase.from('north_star_history').insert({ user_id: user.id, north_star: draft.trim() })
+      await refreshProfile()
+      fetchHistory()
+    }
     setLoading(false)
     setEditing(false)
     setConfirm(false)
-    fetchHistory()
   }
 
   const weeks = weeksSince(profile?.created_at)
