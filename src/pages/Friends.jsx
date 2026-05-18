@@ -10,13 +10,17 @@ export default function Friends() {
   const { user } = useAuth()
   const [friends, setFriends] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeThread, setActiveThread] = useState(null) // friend object
+  const [activeThread, setActiveThread] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState({})
+  const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const searchRef = useRef(null)
 
   useEffect(() => {
     if (user) {
@@ -150,6 +154,25 @@ export default function Friends() {
     setUnreadCounts(counts)
   }
 
+  async function searchUsers(query) {
+    if (!query.trim()) { setSearchResults([]); return }
+    setSearching(true)
+    const { data } = await supabase
+      .from('users')
+      .select('id, name, avatar_url, avatar_initials')
+      .ilike('name', `%${query.trim()}%`)
+      .neq('id', user.id)
+      .limit(8)
+    setSearchResults(data || [])
+    setSearching(false)
+  }
+
+  function openThreadFromSearch(person) {
+    setActiveThread({ ...person, groups: [] })
+    setSearch('')
+    setSearchResults([])
+  }
+
   async function loadThread(friendId) {
     const { data } = await supabase
       .from('messages')
@@ -277,12 +300,55 @@ export default function Friends() {
   // Friends list
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="font-serif text-[26px] text-text tracking-tight">Friends</h1>
         {totalUnread > 0 && (
           <span className="text-xs font-semibold text-cream bg-burg px-2.5 py-1 rounded-full">
             {totalUnread} unread
           </span>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-5">
+        <div className="flex items-center gap-2 bg-white border border-border rounded-xl px-4 py-2.5 focus-within:border-burg transition-colors">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text3 flex-shrink-0">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={e => { setSearch(e.target.value); searchUsers(e.target.value) }}
+            placeholder="Search people by name…"
+            className="flex-1 text-sm text-text bg-transparent focus:outline-none placeholder-text3"
+          />
+          {search && (
+            <button onClick={() => { setSearch(''); setSearchResults([]) }} className="text-text3 hover:text-text2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          )}
+        </div>
+
+        {/* Search results dropdown */}
+        {searchResults.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-card overflow-hidden z-10">
+            {searching && <p className="text-xs text-text3 px-4 py-2">Searching…</p>}
+            {searchResults.map(person => (
+              <button
+                key={person.id}
+                onClick={() => openThreadFromSearch(person)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-cream2 transition-colors text-left border-b border-cream2 last:border-0"
+              >
+                <Avatar userId={person.id} avatarUrl={person.avatar_url} initials={person.avatar_initials} size="sm" />
+                <p className="text-sm font-medium text-text">{person.name}</p>
+              </button>
+            ))}
+          </div>
+        )}
+        {search && !searching && searchResults.length === 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-card px-4 py-3 z-10">
+            <p className="text-sm text-text3">No one found with that name.</p>
+          </div>
         )}
       </div>
 
