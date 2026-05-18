@@ -13,6 +13,7 @@ export default function Profile() {
     name: profile?.name || '',
     bio: profile?.bio || '',
     location: profile?.location || '',
+    north_star: profile?.north_star || '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -98,7 +99,7 @@ export default function Profile() {
 
     const { error: updateError } = await supabase
       .from('users')
-      .update({ name: form.name.trim(), bio: form.bio.trim(), location: form.location.trim() })
+      .update({ name: form.name.trim(), bio: form.bio.trim(), location: form.location.trim(), north_star: form.north_star.trim() })
       .eq('id', user.id)
 
     if (updateError) { setError(updateError.message); setSaving(false); return }
@@ -113,7 +114,7 @@ export default function Profile() {
   }
 
   function handleCancel() {
-    setForm({ name: profile?.name || '', bio: profile?.bio || '', location: profile?.location || '' })
+    setForm({ name: profile?.name || '', bio: profile?.bio || '', location: profile?.location || '', north_star: profile?.north_star || '' })
     setEditing(false)
     setError('')
   }
@@ -224,6 +225,16 @@ export default function Profile() {
                 onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
                 placeholder="Barcelona, Spain"
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg placeholder-text3"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-1.5">North Star</label>
+              <textarea
+                value={form.north_star}
+                onChange={e => setForm(f => ({ ...f, north_star: e.target.value }))}
+                rows={3}
+                placeholder="The honest motivation behind everything you're working on..."
+                className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg resize-none placeholder-text3 font-serif italic"
               />
             </div>
             {error && <p className="text-xs text-burg">{error}</p>}

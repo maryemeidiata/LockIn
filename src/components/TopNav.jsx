@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 const NAV_LINKS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/groups', label: 'Groups' },
+  { to: '/feed', label: 'Feed' },
   { to: '/friends', label: 'Friends' },
   { to: '/matches', label: 'Matches' },
   { to: '/challenge', label: 'Challenge' },

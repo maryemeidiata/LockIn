@@ -68,7 +68,7 @@ export default function GroupDetail() {
     if (commitmentIds.length) {
       const { data } = await supabase
         .from('checkins')
-        .select('commitment_id, user_id, day_of_week')
+        .select('commitment_id, user_id, day_of_week, photo_url')
         .in('commitment_id', commitmentIds)
       checkins = data || []
     }
@@ -89,6 +89,7 @@ export default function GroupDetail() {
       const userCheckins = checkins.filter(ci => ci.user_id === m.user_id)
       const checkinDays = userCheckins.map(ci => ci.day_of_week)
       const checked = userCheckins.some(ci => ci.day_of_week === dayIdx)
+      const todayPhoto = userCheckins.find(ci => ci.day_of_week === dayIdx)?.photo_url || null
       const userExcuses = excuses.filter(e => e.user_id === m.user_id)
       const excusedDays = userExcuses.filter(e => e.status === 'approved').map(e => getDayIndexFromTimestamp(e.submitted_at))
       const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at))
@@ -98,6 +99,7 @@ export default function GroupDetail() {
         commitment_id: commitment?.id || null,
         dayStates: buildDayStates(checkinDays, weekStart, excusedDays, rejectedDays),
         todayChecked: checked,
+        todayPhoto,
       }
     })
 
@@ -273,6 +275,11 @@ export default function GroupDetail() {
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
                 <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
+                {m.todayPhoto && (
+                  <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
+                    <img src={m.todayPhoto} alt="Check-in proof" className="mt-1.5 h-16 w-24 object-cover rounded-lg border border-border hover:opacity-90 transition-opacity" />
+                  </a>
+                )}
               </div>
               <DayTrack states={m.dayStates} />
               {m.id !== user.id && (

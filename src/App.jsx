@@ -15,6 +15,7 @@ import History from './pages/History'
 import Votes from './pages/Votes'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
+import Feed from './pages/Feed'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/votes" element={<Votes />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/friends" element={<Friends />} />
+        <Route path="/feed" element={<Feed />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
