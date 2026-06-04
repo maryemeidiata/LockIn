@@ -11,7 +11,7 @@ export default function NorthStarBar({ northStar, createdAt }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-medium uppercase tracking-widest text-text3 mb-0.5">North Star</p>
-        <p className="font-serif italic text-text text-[15px] leading-snug">{northStar || 'Not set — tap to define your why.'}</p>
+        <p className="font-serif italic text-text text-[15px] leading-snug">{northStar || 'Not set yet. Tap to define your why.'}</p>
       </div>
       {weeks > 0 && (
         <div className="flex-shrink-0 text-right">

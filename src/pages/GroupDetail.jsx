@@ -251,7 +251,7 @@ export default function GroupDetail() {
                 </div>
               ) : (
                 <button onClick={() => setShowMissForm(true)} className="text-xs text-text3 hover:text-text2 underline w-full text-center mt-1">
-                  I missed today — submit an excuse
+                  I missed today, submit an excuse
                 </button>
               )}
             </div>
@@ -387,7 +387,7 @@ export default function GroupDetail() {
                 <textarea
                   value={nudgeMsg}
                   onChange={e => setNudgeMsg(e.target.value)}
-                  placeholder={`You've got this — don't give up!`}
+                  placeholder={`You've got this, don't give up!`}
                   rows={3}
                   maxLength={120}
                   className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg resize-none placeholder-text3 mb-4"

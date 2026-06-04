@@ -19,11 +19,32 @@ export default function Onboarding() {
     if (!northStar.trim()) { setError('Please share your North Star before continuing.'); return false }
     setLoading(true)
     setError('')
-    const { error: err } = await supabase
+
+    const { error: err, data } = await supabase
       .from('users')
       .update({ north_star: northStar.trim() })
       .eq('id', user.id)
-    if (err) { setError(err.message); setLoading(false); return false }
+      .select()
+
+    if (err) {
+      setError(err.message || 'Could not save. Please try again.')
+      setLoading(false)
+      return false
+    }
+
+    // If RLS blocked it silently (0 rows updated), data will be empty
+    if (!data || data.length === 0) {
+      // Try upsert as fallback
+      const { error: upsertErr } = await supabase
+        .from('users')
+        .upsert({ id: user.id, north_star: northStar.trim() })
+      if (upsertErr) {
+        setError('Could not save your North Star. Please try again.')
+        setLoading(false)
+        return false
+      }
+    }
+
     await supabase.from('north_star_history').insert({ user_id: user.id, north_star: northStar.trim() }).catch(() => {})
     await refreshProfile()
     setLoading(false)
@@ -101,29 +122,44 @@ function StepWelcome({ onNext }) {
         Accountability, done right.
       </h1>
       <p className="text-sm text-text3 leading-relaxed mb-8 max-w-sm mx-auto">
-        LockIn keeps you honest — not with streaks or badges, but with real people who notice when you show up and when you don't.
+        LockIn keeps you honest, not with streaks or badges, but with real people who notice when you show up and when you don't.
       </p>
 
       <div className="space-y-3 mb-10 text-left">
         {[
           {
-            icon: '🧭',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+              </svg>
+            ),
             title: 'Set your North Star',
             desc: "The honest reason behind everything you're working on.",
           },
           {
-            icon: '👥',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            ),
             title: 'Join a small group',
             desc: 'Up to 6 people. You commit together, you hold each other accountable.',
           },
           {
-            icon: '✅',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20,6 9,17 4,12"/>
+              </svg>
+            ),
             title: 'Check in every day',
             desc: "One tap. Your group sees it. That's the whole point.",
           },
         ].map(item => (
           <div key={item.title} className="flex items-start gap-4 bg-white border border-border rounded-xl p-4 shadow-card">
-            <span className="text-2xl mt-0.5">{item.icon}</span>
+            <div className="w-8 h-8 rounded-full bg-cream2 flex items-center justify-center flex-shrink-0 mt-0.5 text-burg">
+              {item.icon}
+            </div>
             <div>
               <p className="text-sm font-medium text-text">{item.title}</p>
               <p className="text-xs text-text3 mt-0.5 leading-relaxed">{item.desc}</p>
@@ -149,7 +185,7 @@ function StepNorthStar({ value, onChange, error, loading, onNext }) {
         What are you really working toward?
       </h1>
       <p className="text-sm text-text3 text-center leading-relaxed mb-8 max-w-sm mx-auto">
-        Your North Star is the honest motivation behind your goals — not the goal itself. What makes the hard work feel worth it?
+        Your North Star is the honest motivation behind your goals, not the goal itself. What makes the hard work feel worth it?
       </p>
 
       <div className="bg-cream2 border border-border rounded-xl p-3 mb-4 text-xs text-text3 italic space-y-1.5">
@@ -204,7 +240,7 @@ function StepHowItWorks({ onNext }) {
             day: 'Tue–Sat',
             color: 'bg-burg/70',
             title: 'Check in daily',
-            desc: 'One tap to confirm you did it. Miss a day? Submit an excuse — your group votes.',
+            desc: 'One tap to confirm you did it. Miss a day? Submit an excuse and your group votes.',
           },
           {
             day: 'Sun',

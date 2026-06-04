@@ -123,7 +123,7 @@ function VerdictCard({ submission, isOwn }) {
       <p className="text-xs text-text3 mb-2">{submission.excuse_text}</p>
       {isPending && (
         <p className="text-xs text-text3">
-          {validCount + invalidCount} vote(s) cast so far — waiting for the group to finish voting.
+          {validCount + invalidCount} vote(s) cast so far. Waiting for the group to finish.
         </p>
       )}
       {!isPending && !approved && submission.commitment?.consequence_text && (

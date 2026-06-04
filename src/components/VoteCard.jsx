@@ -98,8 +98,8 @@ export default function VoteCard({ submission, onVoted }) {
               : 'bg-red-50 text-red-700 border border-red-200'
           }`}>
             {verdict === 'approved'
-              ? 'Verdict: excuse accepted — no consequence.'
-              : 'Verdict: not accepted — consequence applies.'}
+              ? 'Verdict: excuse accepted. No consequence.'
+              : 'Verdict: not accepted. Consequence applies.'}
           </div>
         ) : (
           <div className="text-center py-2 text-sm text-text3">

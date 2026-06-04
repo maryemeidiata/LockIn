@@ -334,10 +334,10 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
               Invite friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
             </label>
             {selected.size > 0 && (
-              <p className="text-[11px] text-text3 mb-2 italic">They'll receive an invitation to join — they can accept or decline.</p>
+              <p className="text-[11px] text-text3 mb-2 italic">They'll receive an invitation to join. They can accept or decline.</p>
             )}
             {friends.length === 0 ? (
-              <p className="text-xs text-text3 italic">No contacts yet — add friends from the Friends tab first.</p>
+              <p className="text-xs text-text3 italic">No contacts yet. Add friends from the Friends tab first.</p>
             ) : (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {friends.slice(0, 5).map(f => (
