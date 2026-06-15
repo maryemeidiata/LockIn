@@ -52,9 +52,9 @@ export default function TopNav({ pendingVotes = 0, unreadMessages = 0 }) {
       borderBottom: '1px solid var(--border)',
     }}>
       <div style={{
-        maxWidth: 1100, margin: '0 auto',
-        padding: '0 28px',
-        height: 58,
+        maxWidth: 1280, margin: '0 auto',
+        padding: '0 32px',
+        height: 60,
         display: 'flex', alignItems: 'center', gap: 32,
       }}>
         {/* Logo */}

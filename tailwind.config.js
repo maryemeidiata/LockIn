@@ -21,7 +21,9 @@ export default {
         serif: ['"DM Serif Display"', 'serif'],
       },
       boxShadow: {
-        card: '0 1px 3px rgba(26,10,16,0.06)',
+        card: '0 1px 4px rgba(26,10,16,0.07), 0 1px 2px rgba(26,10,16,0.04)',
+        'card-md': '0 4px 16px rgba(26,10,16,0.09), 0 1px 4px rgba(26,10,16,0.05)',
+        'card-hover': '0 8px 28px rgba(26,10,16,0.12), 0 2px 6px rgba(26,10,16,0.06)',
       },
     },
   },

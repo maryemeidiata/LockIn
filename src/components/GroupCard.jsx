@@ -7,9 +7,9 @@ export default function GroupCard({ group }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card p-4">
+    <div className="bg-white border border-border rounded-xl shadow-card p-5 card-interactive">
       <div
-        className="flex items-center justify-between pb-2.5 border-b border-cream2 mb-2 cursor-pointer"
+        className="flex items-center justify-between pb-3 border-b border-cream2 mb-3 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-2">
@@ -28,9 +28,9 @@ export default function GroupCard({ group }) {
 
       <Link
         to={`/groups/${group.id}`}
-        className="block mt-3 text-center text-xs text-text2 hover:text-burg font-medium py-1.5 rounded-lg hover:bg-cream2 transition-colors"
+        className="block mt-3 text-center text-xs text-burg font-medium py-2 rounded-lg hover:bg-cream2 transition-colors border border-transparent hover:border-border"
       >
-        View group
+        View group details
       </Link>
     </div>
   )

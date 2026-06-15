@@ -193,7 +193,7 @@ export default function Groups() {
 
 function GroupDetailCard({ group }) {
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card p-5">
+    <div className="bg-white border border-border rounded-xl shadow-card p-5 card-interactive">
       <div className="flex items-center justify-between mb-1">
         <CardTag label={group.name} variant="group" />
         <Link

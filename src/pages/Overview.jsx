@@ -196,77 +196,88 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <div className="space-y-5">
-        <LoadingPulse lines={2} />
-        <LoadingPulse lines={1} className="h-16" />
-        <div className="grid md:grid-cols-3 gap-3.5">
-          {[1, 2, 3].map(i => <div key={i} className="loading-pulse h-48 rounded-xl" />)}
+      <div className="lg:grid lg:grid-cols-[300px,1fr] lg:gap-8">
+        <div className="space-y-4 mb-6 lg:mb-0">
+          <LoadingPulse lines={2} />
+          <div className="loading-pulse h-44 rounded-2xl" />
+        </div>
+        <div className="space-y-4">
+          <LoadingPulse lines={1} />
+          {[1, 2].map(i => <div key={i} className="loading-pulse h-44 rounded-xl" />)}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-5">
-      {/* Top bar */}
-      <div className="flex items-start justify-between">
+    <div className="lg:grid lg:grid-cols-[300px,1fr] lg:gap-8 lg:items-start">
+
+      {/* Left sidebar — desktop only sticky panel */}
+      <div className="space-y-4 mb-6 lg:mb-0 lg:sticky lg:top-24">
+        {/* Greeting */}
         <div>
-          <h1 className="font-serif text-[26px] text-text leading-tight tracking-tight">
+          <h1 className="font-serif text-[28px] text-text leading-tight tracking-tight">
             {greeting}, {firstName}
           </h1>
-          <p className="text-sm text-text3 mt-0.5">{formatDate()}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm text-text3">{formatDate()}</p>
+            <WeekBadge />
+          </div>
         </div>
-        <WeekBadge />
+
+        {/* North Star — sidebar variant */}
+        <NorthStarBar
+          northStar={profile?.north_star}
+          createdAt={profile?.created_at}
+          sidebar
+        />
       </div>
 
-      {/* Notification banner */}
-      {showNotifBanner && (
-        <NotificationBanner
-          onEnable={async () => {
-            await requestPermission(user?.id)
-            setShowNotifBanner(false)
-          }}
-          onDismiss={() => {
-            sessionStorage.setItem('notif-dismissed', '1')
-            setShowNotifBanner(false)
-          }}
-        />
-      )}
+      {/* Right main content */}
+      <div className="space-y-4">
+        {/* Notification banner */}
+        {showNotifBanner && (
+          <NotificationBanner
+            onEnable={async () => {
+              await requestPermission(user?.id)
+              setShowNotifBanner(false)
+            }}
+            onDismiss={() => {
+              sessionStorage.setItem('notif-dismissed', '1')
+              setShowNotifBanner(false)
+            }}
+          />
+        )}
 
-      {/* North Star */}
-      <NorthStarBar
-        northStar={profile?.north_star}
-        createdAt={profile?.created_at}
-      />
+        {/* Group cards */}
+        {groups.length === 0 ? (
+          <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+            <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
+            <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
+              Create a group
+            </a>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {groups.map(group => (
+              <GroupCard key={group.id} group={group} />
+            ))}
+          </div>
+        )}
 
-      {/* Group cards */}
-      {groups.length === 0 ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
-          <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
-          <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
-            Create a group
-          </a>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-3.5">
-          {groups.map(group => (
-            <GroupCard key={group.id} group={group} />
-          ))}
-        </div>
-      )}
+        {/* Match + vote */}
+        {(match || pendingVotes.length > 0) && (
+          <div className="flex flex-col gap-4">
+            {match && <MatchCard match={match} onCheckIn={() => {}} />}
+            {pendingVotes.slice(0, 1).map(sub => (
+              <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
+            ))}
+          </div>
+        )}
 
-      {/* Match + vote row */}
-      {(match || pendingVotes.length > 0) && (
-        <div className="flex flex-col gap-3.5">
-          {match && <MatchCard match={match} onCheckIn={() => {}} />}
-          {pendingVotes.slice(0, 1).map(sub => (
-            <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
-          ))}
-        </div>
-      )}
-
-      {/* AI insight */}
-      {insight && <InsightCard insight={insight} />}
+        {/* AI insight */}
+        {insight && <InsightCard insight={insight} />}
+      </div>
     </div>
   )
 }
