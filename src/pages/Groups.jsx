@@ -41,7 +41,7 @@ export default function Groups() {
         if (!group) return null
         const { data: members } = await supabase
           .from('group_members')
-          .select('user_id, users(id, name, avatar_initials)')
+          .select('user_id, users(id, name, avatar_initials, avatar_url)')
           .eq('group_id', group.id)
 
         const { data: commitments } = await supabase
@@ -192,27 +192,52 @@ export default function Groups() {
 }
 
 function GroupDetailCard({ group }) {
+  const checkedIn = group.members?.filter(m => m.dayStates?.some(s => s === 'done')).length || 0
+  const total = group.members?.length || 0
+  const progressPct = total ? Math.round((checkedIn / total) * 100) : 0
+
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card p-5 card-interactive">
-      <div className="flex items-center justify-between mb-1">
-        <CardTag label={group.name} variant="group" />
-        <Link
-          to={`/groups/${group.id}`}
-          className="text-xs font-medium text-burg hover:underline"
-        >
-          View details →
-        </Link>
+    <div className="bg-white border border-border rounded-xl shadow-card overflow-hidden card-interactive">
+      {/* Card header */}
+      <div className="px-5 pt-5 pb-4 border-b border-cream2">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <CardTag label={group.name} variant="group" />
+            <p className="text-xs text-text3 mt-1.5">{total} members</p>
+          </div>
+          <Link
+            to={`/groups/${group.id}`}
+            className="text-xs font-medium text-burg hover:underline flex-shrink-0 mt-0.5"
+          >
+            View details →
+          </Link>
+        </div>
+
+        {/* Overlapping avatars + progress */}
+        <div className="flex items-center justify-between">
+          <div className="flex -space-x-2">
+            {group.members?.slice(0, 6).map(m => (
+              <div key={m.id} className="ring-2 ring-white rounded-full">
+                <Avatar userId={m.id} initials={m.avatar_initials} avatarUrl={m.avatar_url} size="sm" />
+              </div>
+            ))}
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] text-text3">{checkedIn}/{total} checked in</p>
+            <div className="w-24 h-1.5 bg-cream2 rounded-full mt-1 overflow-hidden">
+              <div className="h-full bg-burg rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-text3">{group.members?.length} members</p>
-        <DayTrack states={[]} showLabels />
-      </div>
-      <div className="space-y-0.5">
+
+      {/* Member rows */}
+      <div className="px-5 divide-y divide-cream2">
         {group.members?.map(m => (
-          <div key={m.id} className="flex items-center gap-3 py-2 border-b border-cream2 last:border-0">
-            <Avatar userId={m.id} initials={m.avatar_initials} size="sm" />
+          <div key={m.id} className="flex items-center gap-3 py-3">
+            <Avatar userId={m.id} initials={m.avatar_initials} avatarUrl={m.avatar_url} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-text">{m.name}</p>
+              <p className="text-sm font-medium text-text">{m.name}</p>
               <p className="text-[11px] text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
             </div>
             <DayTrack states={m.dayStates || []} />

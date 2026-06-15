@@ -68,7 +68,7 @@ export default function Overview() {
         // Get members
         const { data: members } = await supabase
           .from('group_members')
-          .select('user_id, users(id, name, avatar_initials, north_star)')
+          .select('user_id, users(id, name, avatar_initials, avatar_url, north_star)')
           .eq('group_id', group.id)
 
         // Get commitments for this week
@@ -223,12 +223,13 @@ export default function Overview() {
       <div className="lg:grid lg:grid-cols-[280px,1fr] lg:gap-6 lg:items-start">
 
         {/* Left sidebar */}
-        <div className="mb-6 lg:mb-0 lg:sticky lg:top-24">
+        <div className="mb-6 lg:mb-0 lg:sticky lg:top-24 space-y-4">
           <NorthStarBar
             northStar={profile?.north_star}
             createdAt={profile?.created_at}
             sidebar
           />
+          <SidebarStats groups={groups} pendingVotes={pendingVotes} match={match} />
         </div>
 
         {/* Right content */}
@@ -273,6 +274,42 @@ export default function Overview() {
           {insight && <InsightCard insight={insight} />}
         </div>
       </div>
+    </div>
+  )
+}
+
+function SidebarStats({ groups, pendingVotes, match }) {
+  const totalMembers = groups.reduce((sum, g) => sum + (g.members?.length || 0), 0)
+  const totalCheckedIn = groups.reduce((sum, g) => {
+    return sum + (g.members?.filter(m => m.dayStates?.some(s => s === 'done')).length || 0)
+  }, 0)
+
+  const stats = [
+    { label: 'Groups', value: groups.length },
+    { label: 'Checked in', value: `${totalCheckedIn}/${totalMembers}` },
+    { label: 'Pending votes', value: pendingVotes.length },
+  ]
+
+  return (
+    <div className="bg-white border border-border rounded-2xl shadow-card p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-text3 mb-4">This week</p>
+      <div className="space-y-3">
+        {stats.map(s => (
+          <div key={s.label} className="flex items-center justify-between">
+            <span className="text-xs text-text3">{s.label}</span>
+            <span className="text-sm font-semibold text-text">{s.value}</span>
+          </div>
+        ))}
+      </div>
+      {match && (
+        <div className="mt-4 pt-4 border-t border-cream2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-text3 mb-1">Your match</p>
+          <p className="text-sm font-medium text-burg">{match.other_user?.name}</p>
+          {match.other_commitment && (
+            <p className="text-[11px] text-text3 mt-0.5 truncate">{match.other_commitment}</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
