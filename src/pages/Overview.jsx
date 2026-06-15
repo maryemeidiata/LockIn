@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getCurrentWeekStartStr, formatDate, buildDayStates, weeksSince, getDayIndexFromTimestamp } from '../lib/weekUtils'
+import { getCurrentWeekStartStr, formatDate, buildDayStates, getDayIndexFromTimestamp } from '../lib/weekUtils'
 import { getCache, setCache } from '../lib/cache'
 import NorthStarBar from '../components/NorthStarBar'
 import GroupCard from '../components/GroupCard'
 import MatchCard from '../components/MatchCard'
 import VoteCard from '../components/VoteCard'
 import InsightCard from '../components/InsightCard'
-import WeekBadge from '../components/ui/WeekBadge'
+import HeroBanner from '../components/HeroBanner'
 import LoadingPulse from '../components/ui/LoadingPulse'
 import NotificationBanner from '../components/NotificationBanner'
+import { getWeekOfMonth } from '../lib/weekUtils'
 import { useNotifications } from '../hooks/useNotifications'
 
 export default function Overview() {
@@ -196,87 +197,81 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <div className="lg:grid lg:grid-cols-[300px,1fr] lg:gap-8">
-        <div className="space-y-4 mb-6 lg:mb-0">
-          <LoadingPulse lines={2} />
-          <div className="loading-pulse h-44 rounded-2xl" />
-        </div>
-        <div className="space-y-4">
-          <LoadingPulse lines={1} />
-          {[1, 2].map(i => <div key={i} className="loading-pulse h-44 rounded-xl" />)}
+      <div>
+        <div className="loading-pulse h-44 rounded-2xl mb-6" />
+        <div className="lg:grid lg:grid-cols-[280px,1fr] lg:gap-6">
+          <div className="loading-pulse h-44 rounded-2xl mb-4 lg:mb-0" />
+          <div className="space-y-4">
+            {[1, 2].map(i => <div key={i} className="loading-pulse h-44 rounded-xl" />)}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="lg:grid lg:grid-cols-[300px,1fr] lg:gap-8 lg:items-start">
+    <div>
+      {/* Hero banner — full width */}
+      <HeroBanner
+        greeting={greeting}
+        firstName={firstName}
+        date={formatDate()}
+        week={getWeekOfMonth()}
+      />
 
-      {/* Left sidebar — desktop only sticky panel */}
-      <div className="space-y-4 mb-6 lg:mb-0 lg:sticky lg:top-24">
-        {/* Greeting */}
-        <div>
-          <h1 className="font-serif text-[28px] text-text leading-tight tracking-tight">
-            {greeting}, {firstName}
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-text3">{formatDate()}</p>
-            <WeekBadge />
-          </div>
+      {/* Two-column layout below banner */}
+      <div className="lg:grid lg:grid-cols-[280px,1fr] lg:gap-6 lg:items-start">
+
+        {/* Left sidebar */}
+        <div className="mb-6 lg:mb-0 lg:sticky lg:top-24">
+          <NorthStarBar
+            northStar={profile?.north_star}
+            createdAt={profile?.created_at}
+            sidebar
+          />
         </div>
 
-        {/* North Star — sidebar variant */}
-        <NorthStarBar
-          northStar={profile?.north_star}
-          createdAt={profile?.created_at}
-          sidebar
-        />
-      </div>
+        {/* Right content */}
+        <div className="space-y-4">
+          {showNotifBanner && (
+            <NotificationBanner
+              onEnable={async () => {
+                await requestPermission(user?.id)
+                setShowNotifBanner(false)
+              }}
+              onDismiss={() => {
+                sessionStorage.setItem('notif-dismissed', '1')
+                setShowNotifBanner(false)
+              }}
+            />
+          )}
 
-      {/* Right main content */}
-      <div className="space-y-4">
-        {/* Notification banner */}
-        {showNotifBanner && (
-          <NotificationBanner
-            onEnable={async () => {
-              await requestPermission(user?.id)
-              setShowNotifBanner(false)
-            }}
-            onDismiss={() => {
-              sessionStorage.setItem('notif-dismissed', '1')
-              setShowNotifBanner(false)
-            }}
-          />
-        )}
+          {groups.length === 0 ? (
+            <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+              <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
+              <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
+                Create a group
+              </a>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {groups.map(group => (
+                <GroupCard key={group.id} group={group} />
+              ))}
+            </div>
+          )}
 
-        {/* Group cards */}
-        {groups.length === 0 ? (
-          <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
-            <p className="text-sm text-text3 mb-3">You are not in any groups yet. Groups are how accountability happens.</p>
-            <a href="/groups" className="inline-block px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
-              Create a group
-            </a>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {groups.map(group => (
-              <GroupCard key={group.id} group={group} />
-            ))}
-          </div>
-        )}
+          {(match || pendingVotes.length > 0) && (
+            <div className="flex flex-col gap-4">
+              {match && <MatchCard match={match} onCheckIn={() => {}} />}
+              {pendingVotes.slice(0, 1).map(sub => (
+                <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
+              ))}
+            </div>
+          )}
 
-        {/* Match + vote */}
-        {(match || pendingVotes.length > 0) && (
-          <div className="flex flex-col gap-4">
-            {match && <MatchCard match={match} onCheckIn={() => {}} />}
-            {pendingVotes.slice(0, 1).map(sub => (
-              <VoteCard key={sub.id} submission={sub} onVoted={fetchPendingVotes} />
-            ))}
-          </div>
-        )}
-
-        {/* AI insight */}
-        {insight && <InsightCard insight={insight} />}
+          {insight && <InsightCard insight={insight} />}
+        </div>
       </div>
     </div>
   )
