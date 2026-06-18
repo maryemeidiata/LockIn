@@ -107,9 +107,9 @@ export default function Profile() {
 
   return (
     <div>
-      {/* Banner — abstract bokeh design, distinct from Overview mountains */}
-      <div className="relative">
-        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
+      {/* Banner — avatar + name + info all inside */}
+      <div className="relative rounded-2xl overflow-hidden shadow-card-md mb-5" style={{minHeight: 220}}>
+        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
           <defs>
             <linearGradient id="pb-base" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#3A0F1E" />
@@ -172,56 +172,55 @@ export default function Profile() {
           <rect width="1200" height="180" fill="url(#pb-bot)" />
         </svg>
 
-        {/* Avatar — anchored inside banner bottom-left */}
-        <div className="absolute bottom-0 left-6 translate-y-1/2">
-          <div className="ring-4 ring-cream rounded-full shadow-card-md">
+        {/* Dark gradient at bottom for text legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pointer-events-none" />
+
+        {/* Avatar + name + info — all inside banner at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 flex items-end gap-4">
+          <div className="relative flex-shrink-0">
             {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
+              <img src={avatarUrl} alt="Profile" className="w-20 h-20 rounded-full object-cover ring-2 ring-white/40" />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-burg flex items-center justify-center text-cream font-bold text-3xl">
+              <div className="w-20 h-20 rounded-full bg-burg flex items-center justify-center text-cream font-bold text-2xl ring-2 ring-white/40">
                 {initials}
               </div>
             )}
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-white/90 border border-white/50 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+            >
+              {uploadingPhoto ? <span className="text-[9px] text-text3">...</span> : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text2">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
+              )}
+            </button>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
           </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadingPhoto}
-            className="absolute bottom-1 right-0 w-7 h-7 bg-white border border-border rounded-full flex items-center justify-center hover:bg-cream2 transition-colors shadow-sm"
-          >
-            {uploadingPhoto ? <span className="text-[9px] text-text3">...</span> : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text2">
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
-        </div>
 
-        {/* Edit button */}
-        {!editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="absolute top-4 right-4 px-3 py-1.5 text-xs font-medium text-white bg-white/15 border border-white/25 rounded-[8px] hover:bg-white/25 transition-colors"
-          >
-            Edit profile
-          </button>
-        )}
-      </div>
-
-      {/* Name + info row — below banner, offset for avatar overlap */}
-      <div className="pt-14 px-1 pb-4 flex items-start justify-between">
-        <div className="pl-32">
-          <p className="font-serif text-2xl text-text leading-tight">{profile?.name}</p>
-          <div className="flex items-center gap-3 mt-1">
-            {profile?.location && (
-              <p className="text-sm text-text3 flex items-center gap-1">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {profile.location}
-              </p>
-            )}
-            {joinedDate && <p className="text-xs text-text3">Member since {joinedDate}</p>}
+          <div className="flex-1 min-w-0">
+            <p className="font-serif text-2xl text-white leading-tight drop-shadow-sm">{profile?.name}</p>
+            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              {profile?.location && (
+                <p className="text-sm text-white/75 flex items-center gap-1">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {profile.location}
+                </p>
+              )}
+              {joinedDate && <p className="text-xs text-white/60">Member since {joinedDate}</p>}
+            </div>
           </div>
+
+          {!editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex-shrink-0 px-3 py-1.5 text-xs font-medium text-white bg-white/15 border border-white/25 rounded-[8px] hover:bg-white/25 transition-colors"
+            >
+              Edit profile
+            </button>
+          )}
         </div>
       </div>
 
