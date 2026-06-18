@@ -247,6 +247,7 @@ function ComposeModal({ userId, profile, onClose, onPosted }) {
 
     setLoading(false)
     if (postErr) { setError(postErr.message); return }
+    if (!data) { setError('Post failed to save. Please try again.'); return }
     onPosted(data)
   }
 
