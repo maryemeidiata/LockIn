@@ -341,8 +341,12 @@ function AskAICard({ northStar }) {
       content: `You are a concise accountability coach embedded in the LockIn app. The user's North Star goal is: "${northStar || 'not set yet'}". Answer questions about feasibility of goals, schedules, and accountability habits. Keep replies under 60 words.`,
     }
 
-    const reply = await askAI([systemMsg, ...next])
-    setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+    try {
+      const reply = await askAI([systemMsg, ...next])
+      setMessages(prev => [...prev, { role: 'assistant', content: reply || 'Sorry, I could not respond. Make sure the AI key is configured.' }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+    }
     setLoading(false)
   }
 

@@ -60,7 +60,7 @@ export default function NorthStar() {
   const weeks = weeksSince(profile?.created_at)
 
   return (
-    <div className="max-w-xl">
+    <div>
       <h1 className="font-serif text-[26px] text-text tracking-tight mb-6">North Star</h1>
 
       {/* Current North Star */}

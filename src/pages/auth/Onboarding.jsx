@@ -32,7 +32,7 @@ export default function Onboarding() {
       setError('Please share your North Star before continuing.')
       return
     }
-    if (step === 2) persistNorthStar(northStar)
+    if (step === 2) { try { persistNorthStar(northStar) } catch (_) {} }
     if (step < TOTAL_STEPS) {
       setStep(s => s + 1)
     } else {

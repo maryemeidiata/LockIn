@@ -108,8 +108,8 @@ export default function Profile() {
   return (
     <div>
       {/* Banner — avatar + name + info all inside */}
-      <div className="relative rounded-2xl overflow-hidden shadow-card-md mb-5" style={{minHeight: 220}}>
-        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+      <div className="relative rounded-2xl overflow-hidden shadow-card-md mb-5" style={{minHeight: 220, background: '#2A0A14'}}>
+        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
           <defs>
             <linearGradient id="pb-base" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#3A0F1E" />
