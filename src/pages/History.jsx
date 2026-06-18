@@ -62,7 +62,7 @@ export default function History() {
   if (loading) return <LoadingPulse lines={5} />
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <h1 className="font-serif text-[26px] text-text tracking-tight">History</h1>
 
       {/* Stats */}

@@ -172,8 +172,8 @@ export default function Profile() {
           <rect width="1200" height="180" fill="url(#pb-bot)" />
         </svg>
 
-        {/* Dark gradient at bottom for text legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent pointer-events-none" />
+        {/* Bottom gradient for text legibility */}
+        <div className="absolute inset-0 pointer-events-none" style={{background: 'linear-gradient(to top, rgba(42,10,20,0.75) 0%, rgba(42,10,20,0.2) 45%, transparent 100%)'}} />
 
         {/* Avatar + name + info — all inside banner at bottom */}
         <div className="absolute bottom-0 left-0 right-0 px-6 pb-5 flex items-end gap-4">

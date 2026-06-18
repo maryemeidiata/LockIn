@@ -64,7 +64,7 @@ export default function MonthlyChallenge() {
   const open = challenges.filter(c => !joined.has(c.id))
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div className="flex items-start justify-between">
         <h1 className="font-serif text-[26px] text-text tracking-tight">Monthly Challenge</h1>
         <span className="text-xs text-text3 bg-cream2 border border-border px-3 py-1.5 rounded-full">

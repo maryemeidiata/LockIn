@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getCurrentWeekStartStr, formatDate, buildDayStates, getDayIndexFromTimestamp } from '../lib/weekUtils'
@@ -13,6 +13,7 @@ import LoadingPulse from '../components/ui/LoadingPulse'
 import NotificationBanner from '../components/NotificationBanner'
 import { getWeekOfMonth } from '../lib/weekUtils'
 import { useNotifications } from '../hooks/useNotifications'
+import { askAI } from '../lib/openai'
 
 export default function Overview() {
   const { user, profile } = useAuth()
@@ -220,7 +221,7 @@ export default function Overview() {
       />
 
       {/* Two-column layout below banner */}
-      <div className="lg:grid lg:grid-cols-[280px,1fr] lg:gap-6 lg:items-start">
+      <div className="lg:grid lg:grid-cols-[340px,1fr] lg:gap-6 lg:items-start">
 
         {/* Left sidebar */}
         <div className="mb-6 lg:mb-0 lg:sticky lg:top-24 space-y-4">
@@ -230,6 +231,7 @@ export default function Overview() {
             sidebar
           />
           <SidebarStats groups={groups} pendingVotes={pendingVotes} match={match} />
+          <AskAICard northStar={profile?.north_star} />
         </div>
 
         {/* Right content */}
@@ -310,6 +312,94 @@ function SidebarStats({ groups, pendingVotes, match }) {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function AskAICard({ northStar }) {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading) return
+    setInput('')
+
+    const userMsg = { role: 'user', content: text }
+    const next = [...messages, userMsg]
+    setMessages(next)
+    setLoading(true)
+
+    const systemMsg = {
+      role: 'system',
+      content: `You are a concise accountability coach embedded in the LockIn app. The user's North Star goal is: "${northStar || 'not set yet'}". Answer questions about feasibility of goals, schedules, and accountability habits. Keep replies under 60 words.`,
+    }
+
+    const reply = await askAI([systemMsg, ...next])
+    setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white border border-border rounded-2xl shadow-card p-5 flex flex-col gap-3">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-text3">Ask AI</p>
+
+      {messages.length === 0 && !loading && (
+        <p className="text-xs text-text3 leading-relaxed">
+          Ask anything — is my goal feasible? What should I commit to this week?
+        </p>
+      )}
+
+      {messages.length > 0 && (
+        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`text-xs leading-relaxed px-3 py-2 rounded-xl max-w-[88%] ${
+                m.role === 'user'
+                  ? 'bg-burg text-cream rounded-br-sm'
+                  : 'bg-cream2 text-text rounded-bl-sm'
+              }`}>
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="text-xs px-3 py-2 rounded-xl rounded-bl-sm bg-cream2 text-text3">
+                <span className="inline-flex gap-1">
+                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>·</span>
+                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>·</span>
+                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>·</span>
+                </span>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-1">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Ask a question…"
+          className="flex-1 text-xs bg-cream2 border border-border rounded-[10px] px-3 py-2 text-text placeholder:text-text3 focus:outline-none focus:ring-1 focus:ring-burg/30"
+        />
+        <button
+          onClick={send}
+          disabled={!input.trim() || loading}
+          className="px-3 py-2 bg-burg text-cream text-xs font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-40"
+        >
+          Send
+        </button>
+      </div>
     </div>
   )
 }

@@ -75,7 +75,7 @@ export default function AIInsights() {
   if (loading) return <LoadingPulse lines={4} />
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-[26px] text-text tracking-tight">AI Insights</h1>
         <button

@@ -77,3 +77,7 @@ export async function generateWeeklySummary(weeklyData) {
 Data: ${JSON.stringify(weeklyData, null, 2)}`
   return chat([{ role: 'user', content: prompt }])
 }
+
+export async function askAI(messages) {
+  return chat(messages)
+}

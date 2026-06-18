@@ -54,7 +54,7 @@ export default function Votes() {
   if (loading) return <LoadingPulse lines={3} />
 
   return (
-    <div className="max-w-lg space-y-5">
+    <div className="space-y-5">
       <h1 className="font-serif text-[26px] text-text tracking-tight">Votes</h1>
 
       {pending.length > 0 && (
