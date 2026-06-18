@@ -60,7 +60,7 @@ export default function Signup() {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 required
-                placeholder="Maya Idiat"
+                placeholder="Your name"
                 className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text bg-white focus:outline-none focus:border-burg placeholder-text3"
               />
             </div>

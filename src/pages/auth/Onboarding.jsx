@@ -20,35 +20,35 @@ export default function Onboarding() {
     setLoading(true)
     setError('')
 
-    const { error: err, data } = await supabase
-      .from('users')
-      .update({ north_star: northStar.trim() })
-      .eq('id', user.id)
-      .select()
-
-    if (err) {
-      setError(err.message || 'Could not save. Please try again.')
-      setLoading(false)
-      return false
-    }
-
-    // If RLS blocked it silently (0 rows updated), data will be empty
-    if (!data || data.length === 0) {
-      // Try upsert as fallback
-      const { error: upsertErr } = await supabase
+    try {
+      const { error: err, data } = await supabase
         .from('users')
-        .upsert({ id: user.id, north_star: northStar.trim() })
-      if (upsertErr) {
-        setError('Could not save your North Star. Please try again.')
-        setLoading(false)
-        return false
-      }
-    }
+        .update({ north_star: northStar.trim() })
+        .eq('id', user.id)
+        .select()
 
-    await supabase.from('north_star_history').insert({ user_id: user.id, north_star: northStar.trim() }).catch(() => {})
-    await refreshProfile()
-    setLoading(false)
-    return true
+      if (err) {
+        // Try upsert as fallback
+        const { error: upsertErr } = await supabase
+          .from('users')
+          .upsert({ id: user.id, north_star: northStar.trim() })
+        if (upsertErr) {
+          setError('Could not save your North Star. Please try again.')
+          return false
+        }
+      } else if (!data || data.length === 0) {
+        await supabase.from('users').upsert({ id: user.id, north_star: northStar.trim() }).catch(() => {})
+      }
+
+      await supabase.from('north_star_history').insert({ user_id: user.id, north_star: northStar.trim() }).catch(() => {})
+      refreshProfile().catch(() => {})
+      return true
+    } catch {
+      setError('Something went wrong. You can skip for now and update from your profile.')
+      return false
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleNext() {
@@ -99,6 +99,7 @@ export default function Onboarding() {
             error={error}
             loading={loading}
             onNext={handleNext}
+            onSkip={() => setStep(s => s + 1)}
           />
         )}
         {step === 3 && <StepHowItWorks onNext={handleNext} />}
@@ -178,7 +179,7 @@ function StepWelcome({ onNext }) {
   )
 }
 
-function StepNorthStar({ value, onChange, error, loading, onNext }) {
+function StepNorthStar({ value, onChange, error, loading, onNext, onSkip }) {
   return (
     <div>
       <h1 className="font-serif text-[28px] text-text leading-tight text-center mb-3">
@@ -211,9 +212,13 @@ function StepNorthStar({ value, onChange, error, loading, onNext }) {
       >
         {loading ? 'Saving...' : 'Save & continue'}
       </button>
-      <p className="text-center text-xs text-text3 mt-3">
-        You can always update this from your profile.
-      </p>
+      <button
+        type="button"
+        onClick={onSkip}
+        className="w-full mt-2 py-2 text-xs text-text3 hover:text-text2 transition-colors"
+      >
+        Skip for now — set it later from my profile
+      </button>
     </div>
   )
 }
