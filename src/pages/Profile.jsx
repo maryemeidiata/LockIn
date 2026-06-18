@@ -108,8 +108,8 @@ export default function Profile() {
   return (
     <div>
       {/* Banner — abstract bokeh design, distinct from Overview mountains */}
-      <div className="relative rounded-2xl overflow-hidden shadow-card-md">
-        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+      <div className="relative">
+        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
           <defs>
             <linearGradient id="pb-base" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#3A0F1E" />

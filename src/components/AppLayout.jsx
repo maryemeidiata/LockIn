@@ -74,7 +74,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--cream)' }}>
+    <div style={{ minHeight: '100vh' }}>
       {/* Desktop top nav */}
       <div className="hidden md:block">
         <TopNav pendingVotes={pendingVotes} unreadMessages={unreadMessages} />
