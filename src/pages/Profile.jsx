@@ -107,52 +107,98 @@ export default function Profile() {
 
   return (
     <div>
-      {/* Banner */}
-      <div className="relative rounded-2xl overflow-hidden shadow-card-md mb-0">
-        <svg viewBox="0 0 1200 160" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
+      {/* Banner — abstract bokeh design, distinct from Overview mountains */}
+      <div className="relative rounded-2xl overflow-hidden shadow-card-md">
+        <svg viewBox="0 0 1200 180" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%' }}>
           <defs>
-            <linearGradient id="pb-sky" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#2A0A14" />
-              <stop offset="60%" stopColor="#4A1228" />
-              <stop offset="100%" stopColor="#7A2442" />
+            <linearGradient id="pb-base" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#3A0F1E" />
+              <stop offset="100%" stopColor="#6B1E3A" />
             </linearGradient>
-            <radialGradient id="pb-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#FAF6F1" stopOpacity="0.18" />
+            <radialGradient id="pb-b1" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#8B2A4E" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="#8B2A4E" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="pb-b2" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#C4738A" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#C4738A" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="pb-b3" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#FAF6F1" stopOpacity="0.12" />
               <stop offset="100%" stopColor="#FAF6F1" stopOpacity="0" />
             </radialGradient>
+            <radialGradient id="pb-b4" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#4A1228" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#4A1228" stopOpacity="0" />
+            </radialGradient>
           </defs>
-          <rect width="1200" height="160" fill="url(#pb-sky)" />
-          <ellipse cx="900" cy="55" rx="90" ry="90" fill="url(#pb-glow)" />
-          <circle cx="900" cy="52" r="28" fill="#FAF6F1" opacity="0.09" />
-          <g stroke="white" strokeWidth="0.5" opacity="0.15">
-            <line x1="80" y1="25" x2="145" y2="44" />
-            <line x1="145" y1="44" x2="210" y2="20" />
-            <line x1="700" y1="30" x2="770" y2="46" />
-            <line x1="770" y1="46" x2="845" y2="26" />
+
+          <rect width="1200" height="180" fill="url(#pb-base)" />
+
+          {/* Bokeh circles */}
+          <ellipse cx="120" cy="90" rx="130" ry="130" fill="url(#pb-b1)" />
+          <ellipse cx="400" cy="40" rx="160" ry="160" fill="url(#pb-b2)" />
+          <ellipse cx="720" cy="130" rx="180" ry="180" fill="url(#pb-b1)" />
+          <ellipse cx="980" cy="50" rx="200" ry="200" fill="url(#pb-b2)" />
+          <ellipse cx="1150" cy="140" rx="140" ry="140" fill="url(#pb-b1)" />
+          <ellipse cx="580" cy="90" rx="100" ry="100" fill="url(#pb-b3)" />
+          <ellipse cx="850" cy="20" rx="120" ry="120" fill="url(#pb-b3)" />
+
+          {/* Subtle grid lines for texture */}
+          <g stroke="#FAF6F1" strokeWidth="0.4" opacity="0.06">
+            {[0,120,240,360,480,600,720,840,960,1080,1200].map(x => (
+              <line key={x} x1={x} y1="0" x2={x} y2="180" />
+            ))}
+            {[0,36,72,108,144,180].map(y => (
+              <line key={y} x1="0" y1={y} x2="1200" y2={y} />
+            ))}
           </g>
-          <circle cx="80" cy="25" r="1.8" fill="white" opacity="0.85" />
-          <circle cx="145" cy="44" r="1.3" fill="white" opacity="0.7" />
-          <circle cx="210" cy="20" r="1.3" fill="white" opacity="0.75" />
-          <circle cx="280" cy="35" r="2" fill="white" opacity="0.85" />
-          <circle cx="420" cy="22" r="1" fill="white" opacity="0.5" />
-          <circle cx="540" cy="38" r="1.5" fill="white" opacity="0.65" />
-          <circle cx="620" cy="18" r="1" fill="white" opacity="0.5" />
-          <circle cx="700" cy="30" r="2" fill="white" opacity="0.85" />
-          <circle cx="770" cy="46" r="1.3" fill="white" opacity="0.65" />
-          <circle cx="845" cy="26" r="1.8" fill="white" opacity="0.8" />
-          <circle cx="1010" cy="65" r="0.9" fill="white" opacity="0.45" />
-          <circle cx="1090" cy="35" r="1.8" fill="white" opacity="0.75" />
-          <circle cx="1160" cy="50" r="1.3" fill="white" opacity="0.6" />
-          <g transform="translate(480,36)" opacity="0.9">
-            <line x1="0" y1="-7" x2="0" y2="7" stroke="white" strokeWidth="1.2" opacity="0.5" />
-            <line x1="-7" y1="0" x2="7" y2="0" stroke="white" strokeWidth="1.2" opacity="0.5" />
-            <circle cx="0" cy="0" r="2.2" fill="white" />
-          </g>
-          <path d="M0,160 L0,110 Q80,90 160,105 Q240,92 330,75 Q410,60 490,78 Q570,95 650,75 Q730,55 820,72 Q910,88 1000,68 Q1080,50 1200,62 L1200,160 Z" fill="#3A0F1E" opacity="0.7" />
-          <path d="M0,160 L0,138 Q100,122 220,136 Q340,122 460,110 Q560,100 640,118 Q720,136 820,112 Q920,90 1040,112 Q1120,128 1200,110 L1200,160 Z" fill="#2A0A14" opacity="0.9" />
+
+          {/* Floating orbs */}
+          <circle cx="220" cy="55" r="40" fill="#8B2A4E" opacity="0.3" />
+          <circle cx="220" cy="55" r="22" fill="#8B2A4E" opacity="0.25" />
+          <circle cx="660" cy="110" r="55" fill="#6B1E3A" opacity="0.35" />
+          <circle cx="660" cy="110" r="30" fill="#8B2A4E" opacity="0.2" />
+          <circle cx="1050" cy="75" r="48" fill="#4A1228" opacity="0.45" />
+          <circle cx="1050" cy="75" r="26" fill="#6B1E3A" opacity="0.3" />
+          <circle cx="460" cy="145" r="35" fill="#8B2A4E" opacity="0.2" />
+          <circle cx="820" cy="30" r="42" fill="#C4738A" opacity="0.12" />
+
+          {/* Bottom fade so avatar area is dark enough */}
+          <linearGradient id="pb-bot" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#2A0A14" stopOpacity="0" />
+            <stop offset="100%" stopColor="#2A0A14" stopOpacity="0.45" />
+          </linearGradient>
+          <rect width="1200" height="180" fill="url(#pb-bot)" />
         </svg>
 
-        {/* Edit button top-right */}
+        {/* Avatar — anchored inside banner bottom-left */}
+        <div className="absolute bottom-0 left-6 translate-y-1/2">
+          <div className="ring-4 ring-cream rounded-full shadow-card-md">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover" />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-burg flex items-center justify-center text-cream font-bold text-3xl">
+                {initials}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploadingPhoto}
+            className="absolute bottom-1 right-0 w-7 h-7 bg-white border border-border rounded-full flex items-center justify-center hover:bg-cream2 transition-colors shadow-sm"
+          >
+            {uploadingPhoto ? <span className="text-[9px] text-text3">...</span> : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text2">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            )}
+          </button>
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
+        </div>
+
+        {/* Edit button */}
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -163,40 +209,11 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Avatar — overlaps banner */}
-      <div className="px-6 -mt-10 mb-4 flex items-end justify-between">
-        <div className="relative">
-          <div className="ring-4 ring-cream rounded-full">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-burg flex items-center justify-center text-cream font-semibold text-2xl">
-                {initials}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadingPhoto}
-            className="absolute -bottom-0.5 -right-0.5 w-7 h-7 bg-white border border-border rounded-full flex items-center justify-center hover:bg-cream2 transition-colors shadow-sm"
-            title="Change photo"
-          >
-            {uploadingPhoto ? (
-              <span className="text-[9px] text-text3">...</span>
-            ) : (
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text2">
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-            )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoChange} />
-        </div>
-
-        {/* Name + location to the right of avatar */}
-        <div className="flex-1 ml-4 pb-1">
-          <p className="font-serif text-xl text-text">{profile?.name}</p>
-          <div className="flex items-center gap-3 mt-0.5">
+      {/* Name + info row — below banner, offset for avatar overlap */}
+      <div className="pt-14 px-1 pb-4 flex items-start justify-between">
+        <div className="pl-32">
+          <p className="font-serif text-2xl text-text leading-tight">{profile?.name}</p>
+          <div className="flex items-center gap-3 mt-1">
             {profile?.location && (
               <p className="text-sm text-text3 flex items-center gap-1">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>

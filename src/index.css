@@ -24,6 +24,10 @@ body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
   background: var(--cream);
+  background-image:
+    radial-gradient(ellipse at 15% 0%, #F0E3D8 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 100%, #EDE0D4 0%, transparent 55%);
+  background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
