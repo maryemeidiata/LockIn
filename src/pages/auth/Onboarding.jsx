@@ -15,47 +15,24 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  async function saveNorthStar() {
-    if (!northStar.trim()) { setError('Please share your North Star before continuing.'); return false }
-    setLoading(true)
-    setError('')
-
-    try {
-      const { error: err, data } = await supabase
-        .from('users')
-        .update({ north_star: northStar.trim() })
-        .eq('id', user.id)
-        .select()
-
-      if (err) {
-        // Try upsert as fallback
-        const { error: upsertErr } = await supabase
-          .from('users')
-          .upsert({ id: user.id, north_star: northStar.trim() })
-        if (upsertErr) {
-          setError('Could not save your North Star. Please try again.')
-          return false
+  function persistNorthStar(text) {
+    if (!text.trim() || !user?.id) return
+    supabase.from('users').update({ north_star: text.trim() }).eq('id', user.id)
+      .then(({ data, error: err }) => {
+        if (err || !data?.length) {
+          supabase.from('users').upsert({ id: user.id, north_star: text.trim() }).catch(() => {})
         }
-      } else if (!data || data.length === 0) {
-        await supabase.from('users').upsert({ id: user.id, north_star: northStar.trim() }).catch(() => {})
-      }
-
-      await supabase.from('north_star_history').insert({ user_id: user.id, north_star: northStar.trim() }).catch(() => {})
-      refreshProfile().catch(() => {})
-      return true
-    } catch {
-      setError('Something went wrong. You can skip for now and update from your profile.')
-      return false
-    } finally {
-      setLoading(false)
-    }
+      }).catch(() => {})
+    supabase.from('north_star_history').insert({ user_id: user.id, north_star: text.trim() }).catch(() => {})
+    refreshProfile().catch(() => {})
   }
 
-  async function handleNext() {
-    if (step === 2) {
-      const ok = await saveNorthStar()
-      if (!ok) return
+  function handleNext() {
+    if (step === 2 && !northStar.trim()) {
+      setError('Please share your North Star before continuing.')
+      return
     }
+    if (step === 2) persistNorthStar(northStar)
     if (step < TOTAL_STEPS) {
       setStep(s => s + 1)
     } else {
@@ -207,10 +184,10 @@ function StepNorthStar({ value, onChange, error, loading, onNext, onSkip }) {
 
       <button
         onClick={onNext}
-        disabled={loading || !value.trim()}
+        disabled={!value.trim()}
         className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
       >
-        {loading ? 'Saving...' : 'Save & continue'}
+        Save & continue
       </button>
       <button
         type="button"
