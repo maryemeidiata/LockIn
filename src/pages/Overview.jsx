@@ -307,7 +307,6 @@ function SidebarStats({ groups, pendingVotes, match }) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-lg font-serif text-burg leading-none">{pct}%</span>
-            <span className="text-[9px] text-text3 mt-0.5">checked in</span>
           </div>
         </div>
         {/* Stats */}
