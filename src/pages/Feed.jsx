@@ -19,7 +19,7 @@ export default function Feed() {
     setFetchError('')
     const { data, error } = await supabase
       .from('feed_posts')
-      .select('*, users(id, name, avatar_initials, avatar_url)')
+      .select('*, users!feed_posts_user_id_fkey(id, name, avatar_initials, avatar_url)')
       .order('created_at', { ascending: false })
       .limit(50)
     if (error) setFetchError(error.message)
