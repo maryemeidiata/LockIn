@@ -231,7 +231,7 @@ export default function Overview() {
             sidebar
           />
           <SidebarStats groups={groups} pendingVotes={pendingVotes} match={match} />
-          <AskAICard northStar={profile?.north_star} />
+          <AskAICard profile={profile} groups={groups} match={match} />
         </div>
 
         {/* Right content */}
@@ -319,7 +319,42 @@ function SidebarStats({ groups, pendingVotes, match }) {
 const AI_NAME = 'Stella'
 const CHAT_KEY = 'stella-chat-history'
 
-function AskAICard({ northStar }) {
+function buildSystemPrompt({ profile, groups, match }) {
+  const name = profile?.name?.split(' ')[0] || 'the user'
+  const northStar = profile?.north_star || 'not set yet'
+
+  const commitments = groups.flatMap(g =>
+    (g.members || [])
+      .filter(m => m.id === profile?.id && m.commitment_text)
+      .map(m => `"${m.commitment_text}" (in group ${g.name})`)
+  )
+
+  const checkinSummary = groups.flatMap(g =>
+    (g.members || [])
+      .filter(m => m.id === profile?.id && m.dayStates)
+      .map(m => {
+        const done = m.dayStates.filter(s => s === 'done').length
+        return `${done}/7 days checked in this week`
+      })
+  )
+
+  const groupNames = groups.map(g => g.name).join(', ')
+  const matchName = match?.other_user?.name
+  const matchCommitment = match?.other_commitment
+
+  return `You are Stella, a warm and concise accountability coach inside the LockIn app.
+
+User's name: ${name}
+North Star (long-term motivation): ${northStar}
+Groups: ${groupNames || 'none yet'}
+This week's commitment: ${commitments.length ? commitments.join('; ') : 'not set yet'}
+Check-in progress: ${checkinSummary.length ? checkinSummary.join('; ') : 'no data yet'}
+${matchName ? `Accountability match this week: ${matchName}${matchCommitment ? `, working on "${matchCommitment}"` : ''}` : ''}
+
+Speak directly to ${name}. Be specific, warm, and brief — under 60 words per reply. Reference their actual goals and progress when relevant.`
+}
+
+function AskAICard({ profile, groups, match }) {
   const [messages, setMessages] = useState(() => {
     try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]') } catch { return [] }
   })
@@ -347,7 +382,7 @@ function AskAICard({ northStar }) {
 
     const systemMsg = {
       role: 'system',
-      content: `You are ${AI_NAME}, a concise accountability coach embedded in the LockIn app. The user's North Star goal is: "${northStar || 'not set yet'}". Answer questions about feasibility of goals, schedules, and accountability habits. Keep replies under 60 words.`,
+      content: buildSystemPrompt({ profile, groups, match }),
     }
 
     try {
