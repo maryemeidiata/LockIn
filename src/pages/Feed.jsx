@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/ui/Avatar'
@@ -117,18 +117,43 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
   const [likeCount, setLikeCount] = useState(0)
   const [liked, setLiked] = useState(false)
   const [likeLoading, setLikeLoading] = useState(false)
+  const [comments, setComments] = useState([])
+  const [commentCount, setCommentCount] = useState(0)
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     async function fetchLikes() {
-      const { data } = await supabase
-        .from('feed_likes')
-        .select('user_id')
-        .eq('post_id', post.id)
+      const { data } = await supabase.from('feed_likes').select('user_id').eq('post_id', post.id)
       setLikeCount(data?.length || 0)
       setLiked(data?.some(l => l.user_id === currentUserId) || false)
     }
+    async function fetchCommentCount() {
+      const { count } = await supabase.from('feed_comments').select('id', { count: 'exact', head: true }).eq('post_id', post.id)
+      setCommentCount(count || 0)
+    }
     fetchLikes()
+    fetchCommentCount()
   }, [post.id])
+
+  useEffect(() => {
+    if (showComments) fetchComments()
+  }, [showComments])
+
+  useEffect(() => {
+    if (showComments && inputRef.current) inputRef.current.focus()
+  }, [showComments])
+
+  async function fetchComments() {
+    const { data } = await supabase
+      .from('feed_comments')
+      .select('id, comment_text, created_at, user_id, users!feed_comments_user_id_fkey(id, name, avatar_initials, avatar_url)')
+      .eq('post_id', post.id)
+      .order('created_at', { ascending: true })
+    setComments(data || [])
+  }
 
   async function toggleLike() {
     if (likeLoading) return
@@ -145,6 +170,29 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
     setLikeLoading(false)
   }
 
+  async function submitComment(e) {
+    e.preventDefault()
+    if (!commentText.trim() || commentLoading) return
+    setCommentLoading(true)
+    const { data } = await supabase
+      .from('feed_comments')
+      .insert({ post_id: post.id, user_id: currentUserId, comment_text: commentText.trim() })
+      .select('id, comment_text, created_at, user_id, users!feed_comments_user_id_fkey(id, name, avatar_initials, avatar_url)')
+      .single()
+    if (data) {
+      setComments(prev => [...prev, data])
+      setCommentCount(n => n + 1)
+    }
+    setCommentText('')
+    setCommentLoading(false)
+  }
+
+  async function deleteComment(commentId) {
+    await supabase.from('feed_comments').delete().eq('id', commentId)
+    setComments(prev => prev.filter(c => c.id !== commentId))
+    setCommentCount(n => n - 1)
+  }
+
   const u = post.users
 
   return (
@@ -159,10 +207,7 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
           </div>
         </div>
         {post.user_id === currentUserId && (
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-xs text-text3 hover:text-burg transition-colors"
-          >
+          <button onClick={() => onDelete(post.id)} className="text-xs text-text3 hover:text-burg transition-colors">
             Delete
           </button>
         )}
@@ -175,32 +220,80 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
 
       {/* Media */}
       {post.media_url && post.media_type === 'image' && (
-        <img
-          src={post.media_url}
-          alt="Post"
-          className="w-full max-h-96 object-cover"
-        />
+        <div className="bg-cream2 flex items-center justify-center">
+          <img src={post.media_url} alt="Post" className="w-full max-h-[480px] object-contain" />
+        </div>
       )}
       {post.media_url && post.media_type === 'video' && (
-        <video
-          src={post.media_url}
-          controls
-          className="w-full max-h-96 object-cover"
-        />
+        <video src={post.media_url} controls className="w-full max-h-[480px] bg-black" />
       )}
 
       {/* Actions */}
       <div className="flex items-center gap-4 px-5 py-3 border-t border-cream2">
         <button
           onClick={toggleLike}
-          className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? 'text-burg' : 'text-text3 hover:text-burg'}`}
+          className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-burg' : 'text-text3 hover:text-burg'}`}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8">
             <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
           </svg>
           <span className="text-[13px] font-medium">{likeCount > 0 ? likeCount : ''}</span>
         </button>
+
+        <button
+          onClick={() => setShowComments(v => !v)}
+          className={`flex items-center gap-1.5 transition-colors ${showComments ? 'text-burg' : 'text-text3 hover:text-burg'}`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+          <span className="text-[13px] font-medium">{commentCount > 0 ? commentCount : ''}</span>
+        </button>
       </div>
+
+      {/* Comments section */}
+      {showComments && (
+        <div className="border-t border-cream2">
+          {comments.length > 0 && (
+            <div className="px-5 pt-3 space-y-3">
+              {comments.map(c => (
+                <div key={c.id} className="flex gap-2.5 group">
+                  <Avatar userId={c.users?.id} initials={c.users?.avatar_initials} avatarUrl={c.users?.avatar_url} size="xs" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[12px] font-semibold text-text mr-1.5">{c.users?.name || 'Unknown'}</span>
+                    <span className="text-[13px] text-text leading-snug">{c.comment_text}</span>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-[11px] text-text3">{timeAgo(c.created_at)}</span>
+                      {c.user_id === currentUserId && (
+                        <button onClick={() => deleteComment(c.id)} className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity">
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={submitComment} className="flex items-center gap-2.5 px-5 py-3">
+            <input
+              ref={inputRef}
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              placeholder="Add a comment..."
+              className="flex-1 text-sm text-text placeholder-text3 bg-cream2 rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-burg/30"
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || commentLoading}
+              className="text-[13px] font-semibold text-burg disabled:opacity-40 transition-opacity"
+            >
+              Post
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

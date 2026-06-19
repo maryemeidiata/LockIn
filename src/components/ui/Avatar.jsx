@@ -14,7 +14,7 @@ function colorFromId(id = '') {
 }
 
 export default function Avatar({ userId, initials, avatarUrl, size = 'md' }) {
-  const sizeMap = { sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base' }
+  const sizeMap = { xs: 'w-5 h-5 text-[9px]', sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base' }
   const color = colorFromId(userId)
   if (avatarUrl) {
     return (
