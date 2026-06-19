@@ -376,7 +376,7 @@ function PostMedia({ post }) {
 
   let grid
   if (items.length === 1) {
-    grid = renderItem(items[0], 0, 'w-full max-h-[560px] object-contain bg-black')
+    grid = renderItem(items[0], 0, 'w-full object-cover')
   } else if (items.length === 2) {
     grid = (
       <div className="flex gap-0.5 h-64">
