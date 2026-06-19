@@ -245,6 +245,20 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
       {post.media_url && post.media_type === 'video' && (
         <video src={post.media_url} controls className="w-full max-h-[480px] bg-black" />
       )}
+      {post.media_url && post.media_type === 'multi' && (() => {
+        try {
+          const items = JSON.parse(post.media_url)
+          return (
+            <div className={`grid gap-1 ${items.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {items.map((item, i) => item.type === 'video' ? (
+                <video key={i} src={item.url} controls className="w-full h-48 object-cover bg-black" />
+              ) : (
+                <img key={i} src={item.url} alt="Post" className="w-full h-48 object-cover" />
+              ))}
+            </div>
+          )
+        } catch { return null }
+      })()}
 
       {/* Actions */}
       <div className="flex items-center gap-4 px-5 py-3 border-t border-cream2">
@@ -316,52 +330,67 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
   )
 }
 
+const MAX_FILE_MB = 45
+
 function ComposeModal({ userId, profile, onClose, onPosted }) {
   const [caption, setCaption] = useState('')
-  const [mediaFile, setMediaFile] = useState(null)
-  const [mediaPreview, setMediaPreview] = useState(null)
-  const [mediaType, setMediaType] = useState(null)
+  const [mediaFiles, setMediaFiles] = useState([]) // [{ file, preview, type }]
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef()
 
   function handleMediaSelect(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const type = file.type.startsWith('video') ? 'video' : 'image'
-    setMediaFile(file)
-    setMediaType(type)
-    setMediaPreview(URL.createObjectURL(file))
-  }
-
-  function removeMedia() {
-    setMediaFile(null)
-    setMediaPreview(null)
-    setMediaType(null)
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const tooBig = files.find(f => f.size > MAX_FILE_MB * 1024 * 1024)
+    if (tooBig) { setError(`"${tooBig.name}" is too large. Max ${MAX_FILE_MB}MB per file.`); return }
+    const newItems = files.map(f => ({
+      file: f,
+      preview: URL.createObjectURL(f),
+      type: f.type.startsWith('video') ? 'video' : 'image',
+    }))
+    setMediaFiles(prev => [...prev, ...newItems].slice(0, 4))
+    setError('')
     if (fileRef.current) fileRef.current.value = ''
   }
 
+  function removeMedia(idx) {
+    setMediaFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
   async function handlePost() {
-    if (!caption.trim() && !mediaFile) { setError('Write something or add a photo.'); return }
+    if (!caption.trim() && !mediaFiles.length) { setError('Write something or add a photo.'); return }
     setLoading(true)
     setError('')
 
     let media_url = null
+    let media_type = null
 
-    if (mediaFile) {
-      const ext = mediaFile.name.split('.').pop()
-      const path = `${userId}/${Date.now()}.${ext}`
-      const { error: uploadErr } = await supabase.storage
-        .from('feed-media')
-        .upload(path, mediaFile, { contentType: mediaFile.type })
-      if (uploadErr) { setError('Upload failed: ' + uploadErr.message); setLoading(false); return }
-      const { data: { publicUrl } } = supabase.storage.from('feed-media').getPublicUrl(path)
-      media_url = publicUrl
+    if (mediaFiles.length > 0) {
+      // Upload all files, use first one as primary media_url for backwards compat
+      const uploads = await Promise.all(mediaFiles.map(async ({ file, type }) => {
+        const ext = file.name.split('.').pop()
+        const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: uploadErr } = await supabase.storage
+          .from('feed-media')
+          .upload(path, file, { contentType: file.type })
+        if (uploadErr) throw new Error(uploadErr.message)
+        const { data: { publicUrl } } = supabase.storage.from('feed-media').getPublicUrl(path)
+        return { url: publicUrl, type }
+      }))
+
+      media_url = uploads[0].url
+      media_type = uploads[0].type
+      // Store all URLs as JSON in media_url if multiple
+      if (uploads.length > 1) {
+        media_url = JSON.stringify(uploads.map(u => ({ url: u.url, type: u.type })))
+        media_type = 'multi'
+      }
     }
 
     const { data, error: postErr } = await supabase
       .from('feed_posts')
-      .insert({ user_id: userId, caption: caption.trim() || null, media_url, media_type: mediaType })
+      .insert({ user_id: userId, caption: caption.trim() || null, media_url, media_type })
       .select()
       .single()
 
@@ -389,19 +418,23 @@ function ComposeModal({ userId, profile, onClose, onPosted }) {
           className="w-full text-sm text-text placeholder-text3 focus:outline-none resize-none mb-3"
         />
 
-        {mediaPreview && (
-          <div className="relative mb-3">
-            {mediaType === 'image' ? (
-              <img src={mediaPreview} alt="Preview" className="w-full h-48 object-cover rounded-xl border border-border" />
-            ) : (
-              <video src={mediaPreview} className="w-full h-48 object-cover rounded-xl border border-border" />
-            )}
-            <button
-              onClick={removeMedia}
-              className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm text-text2 hover:text-burg"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        {mediaFiles.length > 0 && (
+          <div className={`grid gap-2 mb-3 ${mediaFiles.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {mediaFiles.map((m, idx) => (
+              <div key={idx} className="relative">
+                {m.type === 'image' ? (
+                  <img src={m.preview} alt="Preview" className="w-full h-36 object-cover rounded-xl border border-border" />
+                ) : (
+                  <video src={m.preview} className="w-full h-36 object-cover rounded-xl border border-border" />
+                )}
+                <button
+                  onClick={() => removeMedia(idx)}
+                  className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-sm text-text2 hover:text-burg"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -410,12 +443,13 @@ function ComposeModal({ userId, profile, onClose, onPosted }) {
         <div className="flex items-center justify-between pt-3 border-t border-cream2">
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 text-text3 hover:text-burg transition-colors text-sm"
+            disabled={mediaFiles.length >= 4}
+            className="flex items-center gap-2 text-text3 hover:text-burg transition-colors text-sm disabled:opacity-40"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Photo / video
+            {mediaFiles.length > 0 ? `${mediaFiles.length}/4 files` : 'Photo / video'}
           </button>
-          <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleMediaSelect} />
+          <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleMediaSelect} />
 
           <div className="flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm text-text2 bg-cream2 border border-border rounded-[10px] hover:bg-cream3 transition-colors">
@@ -423,7 +457,7 @@ function ComposeModal({ userId, profile, onClose, onPosted }) {
             </button>
             <button
               onClick={handlePost}
-              disabled={loading || (!caption.trim() && !mediaFile)}
+              disabled={loading || (!caption.trim() && !mediaFiles.length)}
               className="px-4 py-2 text-sm font-medium text-cream bg-burg rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
             >
               {loading ? 'Posting...' : 'Post'}

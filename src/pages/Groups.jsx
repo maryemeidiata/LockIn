@@ -9,7 +9,7 @@ import Avatar from '../components/ui/Avatar'
 import DayTrack from '../components/ui/DayTrack'
 import LoadingPulse from '../components/ui/LoadingPulse'
 
-const MAX_GROUPS = 3
+const MAX_GROUPS = 20
 
 export default function Groups() {
   const { user } = useAuth()
