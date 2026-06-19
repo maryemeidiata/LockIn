@@ -8,6 +8,7 @@ export default function Feed() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCompose, setShowCompose] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
   useEffect(() => {
     if (user) fetchPosts()
@@ -15,11 +16,13 @@ export default function Feed() {
 
   async function fetchPosts() {
     setLoading(true)
-    const { data } = await supabase
+    setFetchError('')
+    const { data, error } = await supabase
       .from('feed_posts')
       .select('*, users(id, name, avatar_initials, avatar_url)')
       .order('created_at', { ascending: false })
       .limit(50)
+    if (error) setFetchError(error.message)
     setPosts(data || [])
     setLoading(false)
   }
@@ -48,6 +51,12 @@ export default function Feed() {
           Post
         </button>
       </div>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-xs text-red-700 font-mono">
+          DB error: {fetchError}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-4">
