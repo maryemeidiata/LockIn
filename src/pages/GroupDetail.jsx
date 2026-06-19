@@ -54,7 +54,7 @@ export default function GroupDetail() {
   async function fetchMembers() {
     const { data: mems } = await supabase
       .from('group_members')
-      .select('user_id, users(id, name, avatar_initials, north_star)')
+      .select('user_id, role, users(id, name, avatar_initials, north_star)')
       .eq('group_id', groupId)
 
     const { data: commitments } = await supabase
@@ -86,6 +86,7 @@ export default function GroupDetail() {
     const memberList = (mems || []).map(m => {
       const u = m.users
       const commitment = commitments?.find(c => c.user_id === m.user_id)
+      const role = m.role || 'member'
       const userCheckins = checkins.filter(ci => ci.user_id === m.user_id)
       const checkinDays = userCheckins.map(ci => ci.day_of_week)
       const checked = userCheckins.some(ci => ci.day_of_week === dayIdx)
@@ -95,6 +96,7 @@ export default function GroupDetail() {
       const rejectedDays = userExcuses.filter(e => e.status === 'rejected').map(e => getDayIndexFromTimestamp(e.submitted_at))
       return {
         ...u,
+        role,
         commitment_text: commitment?.commitment_text || '',
         commitment_id: commitment?.id || null,
         dayStates: buildDayStates(checkinDays, weekStart, excusedDays, rejectedDays),
@@ -144,6 +146,11 @@ export default function GroupDetail() {
     fetchMembers()
   }
 
+  async function promoteToAdmin(memberId) {
+    await supabase.from('group_members').update({ role: 'admin' }).eq('group_id', groupId).eq('user_id', memberId)
+    fetchMembers()
+  }
+
   async function cancelInvite(inviteId) {
     await supabase.from('invitations').update({ status: 'cancelled' }).eq('id', inviteId)
     fetchPendingInvites()
@@ -181,9 +188,9 @@ export default function GroupDetail() {
 
   if (loading) return <LoadingPulse lines={5} />
 
-  const isCreator = group?.created_by === user.id
+  const isAdmin = members.find(m => m.id === user.id)?.role === 'admin'
   const totalSlots = members.length + pendingInvites.length
-  const canInvite = totalSlots < MAX_MEMBERS
+  const canInvite = isAdmin && totalSlots < MAX_MEMBERS
 
   return (
     <div>
@@ -272,6 +279,7 @@ export default function GroupDetail() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text">
                   {m.id === user.id ? 'You' : m.name}
+                  {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
                 <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
@@ -291,7 +299,16 @@ export default function GroupDetail() {
                   Nudge
                 </button>
               )}
-              {isCreator && m.id !== user.id && (
+              {isAdmin && m.id !== user.id && m.role !== 'admin' && (
+                <button
+                  onClick={() => promoteToAdmin(m.id)}
+                  className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  title="Make admin"
+                >
+                  Make admin
+                </button>
+              )}
+              {isAdmin && m.id !== user.id && (
                 <button
                   onClick={() => removeMember(m.id)}
                   className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity"

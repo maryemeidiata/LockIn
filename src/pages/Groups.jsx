@@ -319,8 +319,8 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
 
     if (gErr) { setError(gErr.message); setLoading(false); return }
 
-    // Add creator directly
-    await supabase.from('group_members').insert({ group_id: group.id, user_id: userId })
+    // Add creator as admin
+    await supabase.from('group_members').insert({ group_id: group.id, user_id: userId, role: 'admin' })
 
     // Send invitations to selected friends — they'll accept/decline from their Groups page
     for (const friendId of selected) {
