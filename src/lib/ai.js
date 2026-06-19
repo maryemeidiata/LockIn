@@ -8,7 +8,7 @@ async function cohereChat(messages) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${COHERE_KEY}`,
     },
-    body: JSON.stringify({ model: 'command-r-plus', messages }),
+    body: JSON.stringify({ model: 'command-a-03-2025', messages }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.message || data.detail || `Cohere error ${res.status}`)
