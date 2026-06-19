@@ -74,7 +74,7 @@ export default function VoteCard({ submission, onVoted }) {
   const person = submission.user
 
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card px-5 py-4">
+    <div className="bg-white border border-border rounded-2xl shadow-card px-5 py-4">
       <div className="flex items-center justify-between mb-3">
         <CardTag label="Vote needed" variant="vote" />
       </div>

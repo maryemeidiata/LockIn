@@ -155,10 +155,20 @@ export default function Matches() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-serif text-[26px] text-text tracking-tight">Matches</h1>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(107,30,58,0.08)'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--burg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 className="font-serif text-[22px] text-text tracking-tight leading-none mb-0.5">Matches</h1>
+          <p className="text-xs text-text3">Your weekly accountability partner</p>
+        </div>
+      </div>
 
       {generating ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-8 text-center">
           <div className="w-10 h-10 rounded-full bg-cream2 flex items-center justify-center mx-auto mb-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--burg-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
               <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
@@ -198,12 +208,12 @@ export default function Matches() {
           )}
         </div>
       ) : noPool ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-8 text-center">
           <p className="text-sm font-medium text-text mb-1">No match available</p>
           <p className="text-xs text-text3 max-w-xs mx-auto">Join a group with other members to get weekly matches.</p>
         </div>
       ) : (
-        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-8 text-center">
           <p className="text-sm font-medium text-text mb-1">No match yet this week</p>
           <p className="text-xs text-text3 max-w-xs mx-auto mb-4">Something went wrong generating your match.</p>
           <button
@@ -220,7 +230,7 @@ export default function Matches() {
           <h2 className="font-serif text-lg text-text mb-3">Previous matches</h2>
           <div className="space-y-3">
             {history.map(m => (
-              <div key={m.id} className="bg-white border border-border rounded-xl shadow-card px-5 py-4 flex items-center gap-4">
+              <div key={m.id} className="bg-white border border-border rounded-2xl shadow-card px-5 py-4 flex items-center gap-4">
                 <Avatar userId={m.other?.id} initials={m.other?.avatar_initials} avatarUrl={m.other?.avatar_url} size="md" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text">{m.other?.name}</p>

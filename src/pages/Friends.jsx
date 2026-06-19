@@ -319,10 +319,21 @@ export default function Friends() {
   // Friends list
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="font-serif text-[26px] text-text tracking-tight">Friends</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(107,30,58,0.08)'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--burg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-serif text-[22px] text-text tracking-tight leading-none mb-0.5">Friends</h1>
+          <p className="text-xs text-text3">
+            {friends.length > 0 ? `${friends.length} ${friends.length === 1 ? 'person' : 'people'} in your circles` : 'Connect with your crew'}
+          </p>
+        </div>
         {totalUnread > 0 && (
-          <span className="text-xs font-semibold text-cream bg-burg px-2.5 py-1 rounded-full">
+          <span className="text-xs font-semibold text-cream bg-burg px-2.5 py-1 rounded-full flex-shrink-0">
             {totalUnread} unread
           </span>
         )}
@@ -330,7 +341,7 @@ export default function Friends() {
 
       {/* Search */}
       <div className="relative mb-5">
-        <div className="flex items-center gap-2 bg-white border border-border rounded-xl px-4 py-2.5 focus-within:border-burg transition-colors">
+        <div className="flex items-center gap-2 bg-white border border-border rounded-2xl px-4 py-2.5 focus-within:border-burg transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text3 flex-shrink-0">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
@@ -350,7 +361,7 @@ export default function Friends() {
 
         {/* Search results dropdown */}
         {searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-xl shadow-card overflow-hidden z-10">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border rounded-2xl shadow-card overflow-hidden z-10">
             {searching && <p className="text-xs text-text3 px-4 py-2">Searching…</p>}
             {searchResults.map(person => (
               <div key={person.id} className="flex items-center gap-2 px-4 py-3 border-b border-cream2 last:border-0 hover:bg-cream2 transition-colors">
@@ -380,17 +391,17 @@ export default function Friends() {
       </div>
 
       {friends.length === 0 ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-cream2 flex items-center justify-center mx-auto mb-3">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-text3">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-10 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-cream2 flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--burg-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 00-3-3.87"/>
               <path d="M16 3.13a4 4 0 010 7.75"/>
             </svg>
           </div>
-          <p className="text-sm font-medium text-text mb-1">No friends yet</p>
-          <p className="text-xs text-text3">Join or create a group to connect with people.</p>
+          <p className="text-sm font-medium text-text mb-1">No one here yet</p>
+          <p className="text-xs text-text3 max-w-xs mx-auto">Join or create a group — your group members automatically become your friends.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -400,7 +411,7 @@ export default function Friends() {
               <button
                 key={friend.id}
                 onClick={() => setActiveThread(friend)}
-                className="w-full bg-white border border-border rounded-xl shadow-card px-4 py-3.5 flex items-center gap-3 hover:bg-cream2 transition-colors text-left"
+                className="w-full bg-white border border-border rounded-2xl shadow-card px-4 py-3.5 flex items-center gap-3 hover:bg-cream2/60 transition-colors text-left"
               >
                 <div className="relative flex-shrink-0">
                   <Avatar userId={friend.id} avatarUrl={friend.avatar_url} initials={friend.avatar_initials} size="md" />
@@ -411,9 +422,14 @@ export default function Friends() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${unread > 0 ? 'font-semibold text-text' : 'font-medium text-text'}`}>
-                    {friend.name}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-sm ${unread > 0 ? 'font-semibold text-text' : 'font-medium text-text'}`}>
+                      {friend.name}
+                    </p>
+                    {friend.dayStates.filter(s => s === 'done').length >= 6 && (
+                      <span className="text-[13px]" title="On a streak this week">🔥</span>
+                    )}
+                  </div>
                   <p className="text-xs text-text3 truncate">
                     {friend.commitment_text || <span className="italic">No commitment this week</span>}
                   </p>

@@ -42,8 +42,16 @@ export default function Feed() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="font-serif text-[26px] text-text tracking-tight">Feed</h1>
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(107,30,58,0.08)'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--burg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 className="font-serif text-[22px] text-text tracking-tight leading-none mb-0.5">Feed</h1>
+          <p className="text-xs text-text3">What's happening in your groups</p>
+        </div>
       </div>
 
       {/* Compose bar */}
@@ -206,7 +214,7 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
   const u = post.users
 
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card overflow-hidden">
+    <div className="bg-white border border-border rounded-2xl shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3">
         <div className="flex items-center gap-3">

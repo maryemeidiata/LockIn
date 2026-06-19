@@ -109,15 +109,24 @@ export default function Groups() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-[26px] text-text tracking-tight">My groups</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{background:'rgba(107,30,58,0.08)'}}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--burg)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-serif text-[22px] text-text tracking-tight leading-none mb-0.5">My groups</h1>
+          <p className="text-xs text-text3">{groups.length > 0 ? `${groups.length} of ${MAX_GROUPS} groups` : 'Up to 3 groups'}</p>
+        </div>
         <button
           onClick={() => {
             if (groups.length >= MAX_GROUPS) return
             setShowModal(true)
           }}
           disabled={groups.length >= MAX_GROUPS}
-          className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
+          className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50 flex-shrink-0"
         >
           Create group
         </button>
@@ -127,7 +136,7 @@ export default function Groups() {
       {pendingInvites.length > 0 && (
         <div className="space-y-3 mb-5">
           {pendingInvites.map(inv => (
-            <div key={inv.id} className="bg-white border border-burg/30 rounded-xl shadow-card p-4">
+            <div key={inv.id} className="bg-white border border-burg/30 rounded-2xl shadow-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-burg uppercase tracking-wider mb-0.5">Group invitation</p>
@@ -157,14 +166,21 @@ export default function Groups() {
       )}
 
       {groups.length >= MAX_GROUPS && (
-        <div className="bg-cream2 border border-border rounded-xl p-4 mb-5 text-sm text-text2">
+        <div className="bg-cream2 border border-border rounded-2xl p-4 mb-5 text-sm text-text2">
           You are in {MAX_GROUPS} groups, which is the maximum. Groups are intentionally limited to keep accountability meaningful and your attention focused.
         </div>
       )}
 
       {groups.length === 0 ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-10 text-center">
-          <p className="text-text3 text-sm mb-4">You are not in any groups yet. Create one and invite the people who actually hold you accountable.</p>
+        <div className="bg-white border border-border rounded-2xl shadow-card p-10 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-cream2 flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--burg-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-text mb-1">No groups yet</p>
+          <p className="text-text3 text-xs mb-5 max-w-xs mx-auto">Create a group and invite the people who actually hold you accountable.</p>
           <button
             onClick={() => setShowModal(true)}
             className="px-5 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
