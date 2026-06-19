@@ -4,6 +4,7 @@ import AppLayout from './components/AppLayout'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Onboarding from './pages/auth/Onboarding'
+import ResetPassword from './pages/auth/ResetPassword'
 import Overview from './pages/Overview'
 import Groups from './pages/Groups'
 import GroupDetail from './pages/GroupDetail'
@@ -37,6 +38,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         path="/onboarding"
         element={
