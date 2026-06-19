@@ -375,28 +375,29 @@ function PostMedia({ post }) {
   )
 
   let grid
+  const BOX = 'h-64'
   if (items.length === 1) {
-    grid = <div className="aspect-square w-full overflow-hidden">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
+    grid = <div className={`${BOX} w-full overflow-hidden`}>{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
   } else if (items.length === 2) {
     grid = (
-      <div className="flex gap-0.5 aspect-square">
-        {items.map((item, i) => <div key={i} className="w-1/2 overflow-hidden">{renderItem(item, i, 'w-full h-full object-cover')}</div>)}
+      <div className={`flex gap-0.5 ${BOX}`}>
+        {items.map((item, i) => <div key={i} className="w-1/2 h-full overflow-hidden">{renderItem(item, i, 'w-full h-full object-cover')}</div>)}
       </div>
     )
   } else if (items.length === 3) {
     grid = (
-      <div className="flex gap-0.5 aspect-square">
-        <div className="w-1/2 overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
-        <div className="flex flex-col gap-0.5 flex-1">
+      <div className={`flex gap-0.5 ${BOX}`}>
+        <div className="w-1/2 h-full overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
+        <div className="flex flex-col gap-0.5 flex-1 h-full">
           {items.slice(1).map((item, i) => <div key={i} className="flex-1 overflow-hidden">{renderItem(item, i + 1, 'w-full h-full object-cover')}</div>)}
         </div>
       </div>
     )
   } else {
     grid = (
-      <div className="flex gap-0.5 aspect-square">
-        <div className="w-1/2 overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
-        <div className="flex flex-col gap-0.5 flex-1">
+      <div className={`flex gap-0.5 ${BOX}`}>
+        <div className="w-1/2 h-full overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
+        <div className="flex flex-col gap-0.5 flex-1 h-full">
           {items.slice(1, 3).map((item, i) => <div key={i} className="flex-1 overflow-hidden">{renderItem(item, i + 1, 'w-full h-full object-cover')}</div>)}
         </div>
       </div>
