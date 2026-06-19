@@ -9,16 +9,29 @@ export default function ResetPassword() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [ready, setReady] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Supabase puts the token in the URL hash — this picks it up automatically
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // session is now active, user can set new password
-      }
-    })
-    return () => subscription.unsubscribe()
+    // Supabase recovery emails use a token_hash in the query string (PKCE flow)
+    // We need to exchange it for a session before updateUser will work
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+
+    if (tokenHash && type === 'recovery') {
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+        .then(({ error }) => {
+          if (error) setError(error.message)
+          else setReady(true)
+        })
+    } else {
+      // Fallback: listen for PASSWORD_RECOVERY event (older email link format)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') setReady(true)
+      })
+      return () => subscription.unsubscribe()
+    }
   }, [])
 
   async function handleSubmit(e) {
@@ -78,10 +91,10 @@ export default function ResetPassword() {
                 {error && <p className="text-xs text-burg">{error}</p>}
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !ready}
                   className="w-full py-3 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-60"
                 >
-                  {loading ? 'Updating...' : 'Update password'}
+                  {loading ? 'Updating...' : !ready ? 'Verifying link...' : 'Update password'}
                 </button>
               </form>
             </>
