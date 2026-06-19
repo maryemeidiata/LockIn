@@ -316,14 +316,23 @@ function SidebarStats({ groups, pendingVotes, match }) {
   )
 }
 
+const AI_NAME = 'Stella'
+const CHAT_KEY = 'stella-chat-history'
+
 function AskAICard({ northStar }) {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]') } catch { return [] }
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-40)))
   }, [messages])
 
   async function send() {
@@ -338,7 +347,7 @@ function AskAICard({ northStar }) {
 
     const systemMsg = {
       role: 'system',
-      content: `You are a concise accountability coach embedded in the LockIn app. The user's North Star goal is: "${northStar || 'not set yet'}". Answer questions about feasibility of goals, schedules, and accountability habits. Keep replies under 60 words.`,
+      content: `You are ${AI_NAME}, a concise accountability coach embedded in the LockIn app. The user's North Star goal is: "${northStar || 'not set yet'}". Answer questions about feasibility of goals, schedules, and accountability habits. Keep replies under 60 words.`,
     }
 
     try {
@@ -352,11 +361,18 @@ function AskAICard({ northStar }) {
 
   return (
     <div className="bg-white border border-border rounded-2xl shadow-card p-5 flex flex-col gap-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-text3">Ask AI</p>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-text3">{AI_NAME}</p>
+        {messages.length > 0 && (
+          <button onClick={() => { setMessages([]); localStorage.removeItem(CHAT_KEY) }} className="text-[10px] text-text3 hover:text-burg transition-colors">
+            Clear
+          </button>
+        )}
+      </div>
 
       {messages.length === 0 && !loading && (
         <p className="text-xs text-text3 leading-relaxed">
-          Ask anything — is my goal feasible? What should I commit to this week?
+          Ask anything, is my goal feasible? What should I commit to this week?
         </p>
       )}
 
