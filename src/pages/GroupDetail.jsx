@@ -219,7 +219,7 @@ export default function GroupDetail() {
 
       {/* Commitment prompt when none set */}
       {!myCommitment && (
-        <div className="bg-white border border-burg rounded-xl shadow-card p-5 mb-5">
+        <div className="bg-white border border-burg rounded-2xl shadow-card p-5 mb-5">
           <p className="text-xs font-medium text-burg uppercase tracking-wider mb-3">Set this week's commitment</p>
           <CommitmentForm groupId={groupId} onSaved={fetchAll} />
         </div>
@@ -227,7 +227,7 @@ export default function GroupDetail() {
 
       {/* My commitment + check-in */}
       {myCommitment && (
-        <div className="bg-white border border-border rounded-xl shadow-card p-5 mb-5">
+        <div className="bg-white border border-border rounded-2xl shadow-card p-5 mb-5">
           <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">Your commitment</p>
           <p className="text-sm text-text mb-1">{myCommitment.commitment_text}</p>
           <p className="text-xs text-text3 mb-4">If missed: {myCommitment.consequence_text}</p>
@@ -267,7 +267,7 @@ export default function GroupDetail() {
       )}
 
       {/* Members */}
-      <div className="bg-white border border-border rounded-xl shadow-card p-5 mb-4">
+      <div className="bg-white border border-border rounded-2xl shadow-card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs font-medium text-text2 uppercase tracking-wider">Group progress this week</p>
           <DayTrack states={[]} showLabels />

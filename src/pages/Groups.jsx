@@ -197,19 +197,19 @@ function GroupDetailCard({ group }) {
   const progressPct = total ? Math.round((checkedIn / total) * 100) : 0
 
   return (
-    <div className="bg-white border border-border rounded-xl shadow-card overflow-hidden card-interactive">
+    <div className="bg-white border border-border rounded-2xl shadow-card overflow-hidden card-interactive">
       {/* Card header */}
       <div className="px-5 pt-5 pb-4 border-b border-cream2">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <CardTag label={group.name} variant="group" />
-            <p className="text-xs text-text3 mt-1.5">{total} members</p>
+            <p className="font-medium text-text">{group.name}</p>
+            <p className="text-[11px] text-text3 mt-0.5">{total} members · {checkedIn} checked in today</p>
           </div>
           <Link
             to={`/groups/${group.id}`}
             className="text-xs font-medium text-burg hover:underline flex-shrink-0 mt-0.5"
           >
-            View details →
+            View →
           </Link>
         </div>
 

@@ -235,8 +235,8 @@ export default function Profile() {
               { value: stats.groupCount, label: 'Groups' },
             ].map(s => (
               <div key={s.label} className="text-center py-4">
-                <p className="font-serif text-2xl text-burg leading-none">{s.value}</p>
-                <p className="text-[10px] text-text3 mt-1 uppercase tracking-wider">{s.label}</p>
+                <p className="text-2xl font-semibold text-burg leading-none">{s.value}</p>
+                <p className="text-[11px] text-text3 mt-1 uppercase tracking-wider">{s.label}</p>
               </div>
             ))}
           </div>

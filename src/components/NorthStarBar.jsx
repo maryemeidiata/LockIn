@@ -9,12 +9,12 @@ export default function NorthStarBar({ northStar, createdAt, sidebar = false }) 
       <Link to="/north-star" className="block no-underline">
         <div className="north-star-card border border-border rounded-2xl shadow-card-md p-6 card-interactive cursor-pointer">
           <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-burg/10 flex-shrink-0">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-burg/10 flex-shrink-0 star-twinkle">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1l1.796 3.638L14 5.528l-3 2.924.708 4.131L8 10.5l-3.708 2.083L5 8.452 2 5.528l4.204-.89L8 1z" fill="var(--burg)" />
               </svg>
             </div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-burg/70">North Star</p>
+            <p className="text-[11px] font-medium uppercase tracking-widest text-text3">North Star</p>
           </div>
           <p className="font-serif italic text-text text-[18px] leading-snug mb-4">
             {northStar || 'Tap to define your why.'}

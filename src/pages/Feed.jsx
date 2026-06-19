@@ -42,15 +42,19 @@ export default function Feed() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="font-serif text-[26px] text-text tracking-tight">Feed</h1>
-        <button
-          onClick={() => setShowCompose(true)}
-          className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
-        >
-          Post
-        </button>
       </div>
+
+      {/* Compose bar */}
+      <button
+        onClick={() => setShowCompose(true)}
+        className="w-full bg-white border border-border rounded-2xl shadow-card px-4 py-3 flex items-center gap-3 mb-5 hover:border-burg/30 transition-colors text-left"
+      >
+        <Avatar userId={user?.id} initials={profile?.avatar_initials} avatarUrl={profile?.avatar_url} size="sm" />
+        <span className="text-sm text-text3 flex-1">What's on your mind?</span>
+        <span className="text-xs font-medium text-burg px-3 py-1 rounded-full" style={{background:'rgba(107,30,58,0.08)'}}>Post</span>
+      </button>
 
       {fetchError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-xs text-red-700 font-mono">
@@ -75,13 +79,19 @@ export default function Feed() {
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white border border-border rounded-xl shadow-card p-10 text-center">
-          <p className="text-text3 text-sm mb-4">Nothing posted yet. Share something with your group members.</p>
+        <div className="bg-white border border-border rounded-2xl shadow-card p-10 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-cream2 flex items-center justify-center mx-auto mb-4">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--burg-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-text mb-1">Nothing here yet</p>
+          <p className="text-xs text-text3 mb-5 max-w-xs mx-auto">Your crew hasn't posted anything yet. Be the one who starts the conversation.</p>
           <button
             onClick={() => setShowCompose(true)}
             className="px-5 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
           >
-            Write your first post
+            Write the first post
           </button>
         </div>
       ) : (

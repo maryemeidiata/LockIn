@@ -282,33 +282,58 @@ export default function Overview() {
 
 function SidebarStats({ groups, pendingVotes, match }) {
   const totalMembers = groups.reduce((sum, g) => sum + (g.members?.length || 0), 0)
-  const totalCheckedIn = groups.reduce((sum, g) => {
-    return sum + (g.members?.filter(m => m.dayStates?.some(s => s === 'done')).length || 0)
-  }, 0)
-
-  const stats = [
-    { label: 'Groups', value: groups.length },
-    { label: 'Checked in', value: `${totalCheckedIn}/${totalMembers}` },
-    { label: 'Pending votes', value: pendingVotes.length },
-  ]
+  const totalCheckedIn = groups.reduce((sum, g) =>
+    sum + (g.members?.filter(m => m.dayStates?.some(s => s === 'done')).length || 0), 0)
+  const pct = totalMembers > 0 ? Math.round((totalCheckedIn / totalMembers) * 100) : 0
+  const r = 34
+  const circ = 2 * Math.PI * r
+  const dash = (pct / 100) * circ
 
   return (
     <div className="bg-white border border-border rounded-2xl shadow-card p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-text3 mb-4">This week</p>
-      <div className="space-y-3">
-        {stats.map(s => (
-          <div key={s.label} className="flex items-center justify-between">
-            <span className="text-xs text-text3">{s.label}</span>
-            <span className="text-sm font-semibold text-text">{s.value}</span>
+      <p className="text-[11px] font-medium uppercase tracking-widest text-text3 mb-4">This week</p>
+      <div className="flex items-center gap-4 mb-4">
+        {/* Progress ring */}
+        <div className="relative flex-shrink-0">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r={r} fill="none" stroke="var(--cream2)" strokeWidth="6" />
+            <circle
+              cx="40" cy="40" r={r} fill="none" stroke="var(--burg)" strokeWidth="6"
+              strokeDasharray={`${dash} ${circ}`}
+              strokeLinecap="round"
+              transform="rotate(-90 40 40)"
+              style={{ transition: 'stroke-dasharray 0.6s ease' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-lg font-serif text-burg leading-none">{pct}%</span>
+            <span className="text-[9px] text-text3 mt-0.5">checked in</span>
           </div>
-        ))}
+        </div>
+        {/* Stats */}
+        <div className="flex-1 space-y-2.5">
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-text3">Groups</span>
+            <span className="text-sm font-semibold text-text">{groups.length}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-text3">Members</span>
+            <span className="text-sm font-semibold text-text">{totalCheckedIn}/{totalMembers}</span>
+          </div>
+          {pendingVotes.length > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text3">Votes</span>
+              <span className="text-sm font-semibold text-burg">{pendingVotes.length} pending</span>
+            </div>
+          )}
+        </div>
       </div>
       {match && (
-        <div className="mt-4 pt-4 border-t border-cream2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-text3 mb-1">Your match</p>
+        <div className="pt-3 border-t border-cream2">
+          <p className="text-[11px] font-medium uppercase tracking-widest text-text3 mb-1.5">Your match</p>
           <p className="text-sm font-medium text-burg">{match.other_user?.name}</p>
           {match.other_commitment && (
-            <p className="text-[11px] text-text3 mt-0.5 truncate">{match.other_commitment}</p>
+            <p className="text-[11px] text-text3 mt-0.5 leading-relaxed line-clamp-2">{match.other_commitment}</p>
           )}
         </div>
       )}
