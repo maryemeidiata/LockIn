@@ -17,7 +17,7 @@ export default {
         border: '#DDD0C8',
       },
       fontFamily: {
-        sans: ['"Cormorant Garamond"', 'serif'],
+        sans: ['"Urbanist"', 'sans-serif'],
         serif: ['"DM Serif Display"', 'serif'],
       },
       boxShadow: {
