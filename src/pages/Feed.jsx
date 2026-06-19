@@ -237,28 +237,7 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
       )}
 
       {/* Media */}
-      {post.media_url && post.media_type === 'image' && (
-        <div className="bg-cream2 flex items-center justify-center">
-          <img src={post.media_url} alt="Post" className="w-full max-h-[480px] object-contain" />
-        </div>
-      )}
-      {post.media_url && post.media_type === 'video' && (
-        <video src={post.media_url} controls className="w-full max-h-[480px] bg-black" />
-      )}
-      {post.media_url && post.media_type === 'multi' && (() => {
-        try {
-          const items = JSON.parse(post.media_url)
-          return (
-            <div className={`grid gap-1 ${items.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {items.map((item, i) => item.type === 'video' ? (
-                <video key={i} src={item.url} controls className="w-full h-48 object-cover bg-black" />
-              ) : (
-                <img key={i} src={item.url} alt="Post" className="w-full h-48 object-cover" />
-              ))}
-            </div>
-          )
-        } catch { return null }
-      })()}
+      {post.media_url && <PostMedia post={post} />}
 
       {/* Actions */}
       <div className="flex items-center gap-4 px-5 py-3 border-t border-cream2">
@@ -327,6 +306,108 @@ function PostCard({ post, currentUserId, timeAgo, onDelete }) {
         </div>
       )}
     </div>
+  )
+}
+
+function Lightbox({ items, startIndex, onClose }) {
+  const [idx, setIdx] = useState(startIndex)
+  const prev = () => setIdx(i => (i - 1 + items.length) % items.length)
+  const next = () => setIdx(i => (i + 1) % items.length)
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') next()
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const item = items[idx]
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      {items.length > 1 && (
+        <>
+          <button onClick={e => { e.stopPropagation(); prev() }} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15,18 9,12 15,6"/></svg>
+          </button>
+          <button onClick={e => { e.stopPropagation(); next() }} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9,18 15,12 9,6"/></svg>
+          </button>
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {items.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/30'}`} />)}
+          </div>
+        </>
+      )}
+      <div className="max-w-3xl max-h-[90vh] w-full px-14" onClick={e => e.stopPropagation()}>
+        {item.type === 'video' ? (
+          <video src={item.url} controls autoPlay className="w-full max-h-[80vh] object-contain" />
+        ) : (
+          <img src={item.url} alt="" className="w-full max-h-[80vh] object-contain" />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function PostMedia({ post }) {
+  const [lightbox, setLightbox] = useState(null) // index or null
+
+  let items = []
+  if (post.media_type === 'multi') {
+    try { items = JSON.parse(post.media_url) } catch { return null }
+  } else {
+    items = [{ url: post.media_url, type: post.media_type }]
+  }
+
+  if (!items.length) return null
+
+  const open = (i) => setLightbox(i)
+
+  const renderItem = (item, i, className) => item.type === 'video' ? (
+    <video key={i} src={item.url} controls className={className} onClick={e => e.stopPropagation()} />
+  ) : (
+    <img key={i} src={item.url} alt="Post" className={`${className} cursor-pointer`} onClick={() => open(i)} />
+  )
+
+  let grid
+  if (items.length === 1) {
+    grid = renderItem(items[0], 0, 'w-full max-h-[480px] object-cover')
+  } else if (items.length === 2) {
+    grid = (
+      <div className="flex gap-0.5 h-64">
+        {items.map((item, i) => renderItem(item, i, 'w-1/2 h-full object-cover'))}
+      </div>
+    )
+  } else if (items.length === 3) {
+    grid = (
+      <div className="flex gap-0.5 h-64">
+        {renderItem(items[0], 0, 'w-1/2 h-full object-cover flex-shrink-0')}
+        <div className="flex flex-col gap-0.5 flex-1">
+          {items.slice(1).map((item, i) => renderItem(item, i + 1, 'w-full h-1/2 object-cover'))}
+        </div>
+      </div>
+    )
+  } else {
+    grid = (
+      <div className="flex gap-0.5 h-64">
+        {renderItem(items[0], 0, 'w-1/2 h-full object-cover flex-shrink-0')}
+        <div className="flex flex-col gap-0.5 flex-1">
+          {items.slice(1, 3).map((item, i) => renderItem(item, i + 1, 'w-full h-1/2 object-cover'))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="overflow-hidden">{grid}</div>
+      {lightbox !== null && <Lightbox items={items} startIndex={lightbox} onClose={() => setLightbox(null)} />}
+    </>
   )
 }
 
