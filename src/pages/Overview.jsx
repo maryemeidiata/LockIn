@@ -343,9 +343,9 @@ function AskAICard({ northStar }) {
 
     try {
       const reply = await askAI([systemMsg, ...next])
-      setMessages(prev => [...prev, { role: 'assistant', content: reply || 'Sorry, I could not respond. Make sure the AI key is configured.' }])
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong. Please try again.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: reply || 'No response received.' }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
     }
     setLoading(false)
   }
