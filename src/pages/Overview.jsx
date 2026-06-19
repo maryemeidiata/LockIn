@@ -13,7 +13,7 @@ import LoadingPulse from '../components/ui/LoadingPulse'
 import NotificationBanner from '../components/NotificationBanner'
 import { getWeekOfMonth } from '../lib/weekUtils'
 import { useNotifications } from '../hooks/useNotifications'
-import { askAI } from '../lib/openai'
+import { askAI } from '../lib/ai'
 
 export default function Overview() {
   const { user, profile } = useAuth()

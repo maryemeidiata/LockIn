@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import InsightCard from '../components/InsightCard'
 import LoadingPulse from '../components/ui/LoadingPulse'
-import { generateWeeklySummary, generateInsight } from '../lib/openai'
+import { generateWeeklySummary, generateInsight } from '../lib/ai'
 import { getCurrentWeekStartStr } from '../lib/weekUtils'
 
 export default function AIInsights() {
