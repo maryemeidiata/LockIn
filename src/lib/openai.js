@@ -79,5 +79,28 @@ Data: ${JSON.stringify(weeklyData, null, 2)}`
 }
 
 export async function askAI(messages) {
-  return chat(messages)
+  const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY
+  if (!GEMINI_KEY) return chat(messages)
+
+  // Convert OpenAI-style messages to Gemini format
+  const systemMsg = messages.find(m => m.role === 'system')
+  const userMsgs = messages.filter(m => m.role !== 'system')
+
+  const contents = userMsgs.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
+
+  const body = {
+    contents,
+    ...(systemMsg ? { systemInstruction: { parts: [{ text: systemMsg.content }] } } : {}),
+    generationConfig: { maxOutputTokens: 300 },
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+  )
+  const data = await res.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? ''
 }
