@@ -375,34 +375,26 @@ function PostMedia({ post }) {
   )
 
   let grid
-  const MULTI_H = 'h-72'
   if (items.length === 1) {
     grid = (
-      <div className="bg-cream2 flex items-center justify-center">
-        {renderItem(items[0], 0, 'w-full max-h-[480px] object-contain cursor-pointer')}
-      </div>
-    )
-  } else if (items.length === 2) {
-    grid = (
-      <div className={`flex gap-0.5 ${MULTI_H}`}>
-        {items.map((item, i) => <div key={i} className="w-1/2 h-full overflow-hidden">{renderItem(item, i, 'w-full h-full object-cover')}</div>)}
-      </div>
-    )
-  } else if (items.length === 3) {
-    grid = (
-      <div className={`flex gap-0.5 ${MULTI_H}`}>
-        <div className="w-1/2 h-full overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
-        <div className="flex flex-col gap-0.5 flex-1 h-full">
-          {items.slice(1).map((item, i) => <div key={i} className="flex-1 overflow-hidden">{renderItem(item, i + 1, 'w-full h-full object-cover')}</div>)}
-        </div>
+      <div className="w-full bg-cream2 flex items-center justify-center cursor-pointer" onClick={() => open(0)}>
+        {items[0].type === 'video'
+          ? <video src={items[0].url} className="w-full max-h-[480px] object-contain" />
+          : <img src={items[0].url} alt="Post" className="w-full max-h-[480px] object-contain" />}
       </div>
     )
   } else {
     grid = (
-      <div className={`flex gap-0.5 ${MULTI_H}`}>
-        <div className="w-1/2 h-full overflow-hidden flex-shrink-0">{renderItem(items[0], 0, 'w-full h-full object-cover')}</div>
-        <div className="flex flex-col gap-0.5 flex-1 h-full">
-          {items.slice(1, 3).map((item, i) => <div key={i} className="flex-1 overflow-hidden">{renderItem(item, i + 1, 'w-full h-full object-cover')}</div>)}
+      <div className="w-full bg-cream2 flex items-center justify-center relative cursor-pointer" onClick={() => open(0)}>
+        {items[0].type === 'video'
+          ? <video src={items[0].url} className="w-full max-h-[480px] object-contain" />
+          : <img src={items[0].url} alt="Post" className="w-full max-h-[480px] object-contain" />}
+        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          +{items.length - 1}
+        </div>
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1">
+          {items.map((_, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/40'}`} />)}
         </div>
       </div>
     )
