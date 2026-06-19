@@ -27,7 +27,7 @@ export default function Onboarding() {
     refreshProfile().catch(() => {})
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (step === 2 && !northStar.trim()) {
       setError('Please share your North Star before continuing.')
       return
@@ -36,6 +36,7 @@ export default function Onboarding() {
     if (step < TOTAL_STEPS) {
       setStep(s => s + 1)
     } else {
+      await refreshProfile()
       navigate('/')
     }
   }
@@ -84,8 +85,8 @@ export default function Onboarding() {
           <StepNotifications
             status={notifStatus}
             onRequest={requestNotifications}
-            onSkip={() => navigate('/')}
-            onDone={() => navigate('/')}
+            onSkip={async () => { await refreshProfile(); navigate('/') }}
+            onDone={async () => { await refreshProfile(); navigate('/') }}
           />
         )}
       </div>
