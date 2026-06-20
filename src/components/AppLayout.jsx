@@ -82,7 +82,7 @@ export default function AppLayout() {
 
       {/* Main content */}
       <main className="pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 page-fade">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 page-fade" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top, 0px) + 1rem)' }}>
           <Outlet />
         </div>
       </main>

@@ -21,6 +21,7 @@ export default function GroupDetail() {
   const [members, setMembers] = useState([])
   const [myCommitment, setMyCommitment] = useState(null)
   const [todayChecked, setTodayChecked] = useState(false)
+  const [todayExcused, setTodayExcused] = useState(false)
   const [loading, setLoading] = useState(true)
   const [missExcuse, setMissExcuse] = useState('')
   const [showMissForm, setShowMissForm] = useState(false)
@@ -80,7 +81,7 @@ export default function GroupDetail() {
         .from('missed_submissions')
         .select('user_id, submitted_at, status')
         .in('commitment_id', commitmentIds)
-        .in('status', ['approved', 'rejected'])
+        .in('status', ['approved', 'rejected', 'pending'])
       excuses = data || []
     }
 
@@ -109,6 +110,11 @@ export default function GroupDetail() {
     setMembers(memberList)
     const me = memberList.find(m => m.id === user.id)
     if (me?.todayChecked) setTodayChecked(true)
+    const myCommitmentId = commitments?.find(c => c.user_id === user.id)?.id
+    if (myCommitmentId) {
+      const todayExcuse = excuses.find(e => e.user_id === user.id && getDayIndexFromTimestamp(e.submitted_at) === dayIdx)
+      if (todayExcuse) setTodayExcused(true)
+    }
   }
 
   async function fetchMyCommitment() {
@@ -140,6 +146,7 @@ export default function GroupDetail() {
     })
     setShowMissForm(false)
     setMissExcuse('')
+    setTodayExcused(true)
   }
 
   async function removeMember(memberId) {
@@ -252,7 +259,10 @@ export default function GroupDetail() {
             alreadyCheckedIn={todayChecked}
             onCheckIn={fetchMembers}
           />
-          {!todayChecked && (
+          {!todayChecked && todayExcused && (
+            <p className="text-xs text-text3 text-center mt-3">Excuse submitted — pending review.</p>
+          )}
+          {!todayChecked && !todayExcused && (
             <div className="mt-3">
               {showMissForm ? (
                 <div className="space-y-2 mt-2">
@@ -298,7 +308,7 @@ export default function GroupDetail() {
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
-                <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
+                <p className="text-xs text-text3 break-words">{m.commitment_text || 'No commitment set'}</p>
                 {m.todayPhoto && (
                   <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
                     <img
