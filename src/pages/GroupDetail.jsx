@@ -346,7 +346,7 @@ export default function GroupDetail() {
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
-                <p className="text-xs text-text3 break-words">{m.commitment_text || 'No commitment set'}</p>
+                <p className="text-xs text-text3 line-clamp-2">{m.commitment_text || 'No commitment set'}</p>
                 {m.todayPhoto && (
                   <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
                     <img
