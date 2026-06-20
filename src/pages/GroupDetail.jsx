@@ -197,6 +197,9 @@ export default function GroupDetail() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
+          {group?.avatar_url && (
+            <img src={group.avatar_url} alt={group.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-border" onError={e => { e.currentTarget.style.display = 'none' }} />
+          )}
           <h1 className="font-serif text-[26px] text-text tracking-tight">{group?.name}</h1>
           <CardTag label={`${members.length} members`} variant="group" />
         </div>

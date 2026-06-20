@@ -30,7 +30,7 @@ export default function Groups() {
     if (!getCache('groups')) setLoading(true)
     const { data: memberships } = await supabase
       .from('group_members')
-      .select('group_id, groups(id, name, created_at)')
+      .select('group_id, groups(id, name, created_at, avatar_url)')
       .eq('user_id', user.id)
 
     if (!memberships?.length) { setLoading(false); return }
@@ -217,9 +217,17 @@ function GroupDetailCard({ group }) {
       {/* Card header */}
       <div className="px-5 pt-5 pb-4 border-b border-cream2">
         <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <p className="font-medium text-text">{group.name}</p>
-            <p className="text-[11px] text-text3 mt-0.5">{total} members · {checkedIn} checked in today</p>
+          <div className="flex items-center gap-3">
+            {group.avatar_url
+              ? <img src={group.avatar_url} alt={group.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0 border border-border" onError={e => { e.currentTarget.style.display = 'none' }} />
+              : <div className="w-10 h-10 rounded-xl bg-cream2 border border-border flex items-center justify-center flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </div>
+            }
+            <div>
+              <p className="font-medium text-text">{group.name}</p>
+              <p className="text-[11px] text-text3 mt-0.5">{total} members · {checkedIn} checked in today</p>
+            </div>
           </div>
           <Link
             to={`/groups/${group.id}`}
