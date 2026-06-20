@@ -237,6 +237,8 @@ export default function GroupDetail() {
 
   const isAdmin = members.find(m => m.id === user.id)?.role === 'admin'
   const isMember = members.some(m => m.id === user.id)
+  const totalSlots = members.length + pendingInvites.length
+  const canInvite = isAdmin && totalSlots < MAX_MEMBERS
 
   return (
     <div>
@@ -269,9 +271,17 @@ export default function GroupDetail() {
           {isMember && (
             <button
               onClick={copyInviteLink}
+              className="px-3 py-2 text-xs font-medium text-text3 border border-border rounded-[10px] hover:border-burg hover:text-burg transition-colors"
+            >
+              {inviteLinkCopied ? 'Copied!' : 'Copy link'}
+            </button>
+          )}
+          {canInvite && (
+            <button
+              onClick={() => setShowInviteModal(true)}
               className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
             >
-              {inviteLinkCopied ? 'Copied!' : 'Invite'}
+              Add people
             </button>
           )}
         </div>
