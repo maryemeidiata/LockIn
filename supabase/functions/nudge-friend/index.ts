@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'LockIn <nudge@lockin.app>',
+      from: 'LockIn <onboarding@resend.dev>',
       to: recipientEmail,
       subject: `${senderFirst} sent you a nudge 💪`,
       html,
