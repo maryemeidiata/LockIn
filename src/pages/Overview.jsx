@@ -379,20 +379,36 @@ Speak directly to ${name}. Be specific, warm, and brief — under 60 words per r
 }
 
 function AskAICard({ profile, groups, match }) {
-  const [messages, setMessages] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(CHAT_KEY) || '[]') } catch { return [] }
-  })
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(true)
   const bottomRef = useRef(null)
+
+  useEffect(() => {
+    if (profile?.id) loadMessages()
+  }, [profile?.id])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  useEffect(() => {
-    localStorage.setItem(CHAT_KEY, JSON.stringify(messages.slice(-40)))
-  }, [messages])
+  async function loadMessages() {
+    setLoadingHistory(true)
+    const { data } = await supabase
+      .from('stella_messages')
+      .select('role, content')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: true })
+      .limit(40)
+    setMessages(data || [])
+    setLoadingHistory(false)
+  }
+
+  async function clearMessages() {
+    await supabase.from('stella_messages').delete().eq('user_id', profile.id)
+    setMessages([])
+  }
 
   async function send() {
     const text = input.trim()
@@ -404,14 +420,15 @@ function AskAICard({ profile, groups, match }) {
     setMessages(next)
     setLoading(true)
 
-    const systemMsg = {
-      role: 'system',
-      content: buildSystemPrompt({ profile, groups, match }),
-    }
+    await supabase.from('stella_messages').insert({ user_id: profile.id, role: 'user', content: text })
+
+    const systemMsg = { role: 'system', content: buildSystemPrompt({ profile, groups, match }) }
 
     try {
       const reply = await askAI([systemMsg, ...next])
-      setMessages(prev => [...prev, { role: 'assistant', content: reply || 'No response received.' }])
+      const assistantContent = reply || 'No response received.'
+      setMessages(prev => [...prev, { role: 'assistant', content: assistantContent }])
+      await supabase.from('stella_messages').insert({ user_id: profile.id, role: 'assistant', content: assistantContent })
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
     }
@@ -423,19 +440,19 @@ function AskAICard({ profile, groups, match }) {
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-text3">{AI_NAME}</p>
         {messages.length > 0 && (
-          <button onClick={() => { setMessages([]); localStorage.removeItem(CHAT_KEY) }} className="text-[10px] text-text3 hover:text-burg transition-colors">
+          <button onClick={clearMessages} className="text-[10px] text-text3 hover:text-burg transition-colors">
             Clear
           </button>
         )}
       </div>
 
-      {messages.length === 0 && !loading && (
+      {!loadingHistory && messages.length === 0 && !loading && (
         <p className="text-xs text-text3 leading-relaxed">
           Ask anything, is my goal feasible? What should I commit to this week?
         </p>
       )}
 
-      {messages.length > 0 && (
+      {(messages.length > 0 || loading) && (
         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
