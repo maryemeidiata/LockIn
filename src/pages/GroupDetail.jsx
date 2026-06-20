@@ -165,21 +165,40 @@ export default function GroupDetail() {
   }
 
   async function copyInviteLink() {
-    let { data: existing } = await supabase
+    const { data: existing, error: fetchError } = await supabase
       .from('invite_links')
       .select('token')
       .eq('group_id', groupId)
       .eq('created_by', user.id)
       .maybeSingle()
 
+    if (fetchError) {
+      console.error('invite_links fetch error:', fetchError)
+      alert('Could not generate invite link. Make sure the invite_links table exists in Supabase.')
+      return
+    }
+
     let token = existing?.token
     if (!token) {
       token = crypto.randomUUID()
-      await supabase.from('invite_links').insert({ token, group_id: groupId, created_by: user.id })
+      const { error: insertError } = await supabase
+        .from('invite_links')
+        .insert({ token, group_id: groupId, created_by: user.id })
+      if (insertError) {
+        console.error('invite_links insert error:', insertError)
+        alert('Could not generate invite link: ' + insertError.message)
+        return
+      }
     }
 
     const url = `${window.location.origin}/join/${token}`
-    await navigator.clipboard.writeText(url)
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // fallback for browsers that block clipboard API
+      prompt('Copy this invite link:', url)
+      return
+    }
     setInviteLinkCopied(true)
     setTimeout(() => setInviteLinkCopied(false), 2000)
   }
