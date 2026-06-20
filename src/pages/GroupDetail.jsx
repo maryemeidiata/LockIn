@@ -298,7 +298,12 @@ export default function GroupDetail() {
                 <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
                 {m.todayPhoto && (
                   <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
-                    <img src={m.todayPhoto} alt="Check-in proof" className="mt-1.5 h-16 w-24 object-cover rounded-lg border border-border hover:opacity-90 transition-opacity" />
+                    <img
+                      src={m.todayPhoto}
+                      alt="Check-in proof"
+                      className="mt-1.5 h-16 w-24 object-cover rounded-lg border border-border hover:opacity-90 transition-opacity"
+                      onError={e => { e.currentTarget.parentElement.style.display = 'none' }}
+                    />
                   </a>
                 )}
               </div>
