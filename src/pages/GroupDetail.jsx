@@ -471,13 +471,25 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
   async function searchUsers(query) {
     if (!query.trim()) { setResults([]); return }
     setSearching(true)
-    const { data } = await supabase
+    const q = query.trim().replace(/^@/, '')
+    // Search by name first (always works), then try username too
+    const { data: byName } = await supabase
       .from('users')
       .select('id, name, username, avatar_initials, avatar_url')
-      .or(`name.ilike.%${query}%,username.ilike.%${query}%`)
+      .ilike('name', `%${q}%`)
       .neq('id', userId)
       .limit(10)
-    setResults(data || [])
+    const { data: byUsername } = await supabase
+      .from('users')
+      .select('id, name, username, avatar_initials, avatar_url')
+      .ilike('username', `%${q}%`)
+      .neq('id', userId)
+      .limit(10)
+    // Merge and deduplicate by id
+    const merged = [...(byName || []), ...(byUsername || [])]
+    const seen = new Set()
+    const unique = merged.filter(u => { if (seen.has(u.id)) return false; seen.add(u.id); return true })
+    setResults(unique.slice(0, 10))
     setSearching(false)
   }
 
