@@ -7,7 +7,7 @@ export default function MemberRow({ member, dayStates = [] }) {
       <Avatar userId={member.id} initials={member.avatar_initials} avatarUrl={member.avatar_url} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text truncate">{member.name}</p>
-        <p className="text-xs text-text3 truncate">{member.commitment_text || 'No commitment set'}</p>
+        <p className="text-xs text-text3 break-words">{member.commitment_text || 'No commitment set'}</p>
       </div>
       <DayTrack states={dayStates} />
     </div>
