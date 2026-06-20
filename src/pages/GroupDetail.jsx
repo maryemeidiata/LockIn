@@ -246,7 +246,6 @@ export default function GroupDetail() {
             <img src={group.avatar_url} alt={group.name} className="w-16 h-16 rounded-2xl object-cover flex-shrink-0 border border-border shadow-card" onError={e => { e.currentTarget.style.display = 'none' }} />
           )}
           <h1 className="font-serif text-[26px] text-text tracking-tight">{group?.name}</h1>
-          <CardTag label={`${members.length} members`} variant="group" />
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
@@ -338,7 +337,7 @@ export default function GroupDetail() {
         </div>
         <div className="space-y-0.5">
           {members.map(m => (
-            <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-cream2 last:border-0 group">
+            <div key={m.id} className="flex items-start gap-3 py-2.5 border-b border-cream2 last:border-0 group">
               <Avatar userId={m.id} initials={m.avatar_initials} size="md" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text truncate">
@@ -346,7 +345,7 @@ export default function GroupDetail() {
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
-                <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
+                <p className="text-xs text-text3 break-words">{m.commitment_text || 'No commitment set'}</p>
                 {m.todayPhoto && (
                   <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
                     <img
