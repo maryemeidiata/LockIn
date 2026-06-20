@@ -432,7 +432,7 @@ export default function GroupDetail() {
           userId={user.id}
           onClose={() => setShowInviteModal(false)}
           onInvited={() => { setShowInviteModal(false); fetchPendingInvites() }}
-          existingCount={totalSlots}
+          existingCount={members.length}
         />
       )}
 
