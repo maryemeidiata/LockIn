@@ -237,8 +237,7 @@ export default function GroupDetail() {
 
   const isAdmin = members.find(m => m.id === user.id)?.role === 'admin'
   const isMember = members.some(m => m.id === user.id)
-  const totalSlots = members.length + pendingInvites.length
-  const canInvite = isAdmin && totalSlots < MAX_MEMBERS
+  const canInvite = isAdmin
 
   return (
     <div>
