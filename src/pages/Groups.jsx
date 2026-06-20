@@ -346,14 +346,9 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
     // Add creator as admin
     await supabase.from('group_members').insert({ group_id: group.id, user_id: userId, role: 'admin' })
 
-    // Send invitations to selected friends — they'll accept/decline from their Groups page
+    // Add selected friends directly as members
     for (const friendId of selected) {
-      await supabase.from('invitations').insert({
-        group_id: group.id,
-        invited_by: userId,
-        invited_user_id: friendId,
-        status: 'pending',
-      })
+      await supabase.from('group_members').insert({ group_id: group.id, user_id: friendId, role: 'member' })
     }
 
     sessionStorage.removeItem('cg_name')
@@ -382,9 +377,6 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
             <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-2">
               Invite friends {selected.size > 0 && <span className="text-burg">({selected.size} selected)</span>}
             </label>
-            {selected.size > 0 && (
-              <p className="text-[11px] text-text3 mb-2 italic">They'll receive an invitation to join. They can accept or decline.</p>
-            )}
             {friends.length === 0 ? (
               <p className="text-xs text-text3 italic">No contacts yet. Add friends from the Friends tab first.</p>
             ) : (
