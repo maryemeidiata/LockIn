@@ -80,6 +80,16 @@ export default function Matches() {
 
     if (!members?.length) { setNoPool(true); setGenerating(false); return }
 
+    // People already matched this week (so we don't double-match anyone)
+    const { data: thisWeekMatches } = await supabase
+      .from('matches')
+      .select('user_id_1, user_id_2')
+      .eq('week_start', weekStart)
+
+    const alreadyMatchedThisWeek = new Set(
+      (thisWeekMatches || []).flatMap(m => [m.user_id_1, m.user_id_2])
+    )
+
     // Recent matches to avoid repeats
     const { data: recentMatches } = await supabase
       .from('matches')
@@ -110,7 +120,8 @@ export default function Matches() {
       }
     }
 
-    const all = [...unique.values()]
+    // Only consider people not already matched this week
+    const all = [...unique.values()].filter(c => !alreadyMatchedThisWeek.has(c.id))
     // Prefer: has commitment this week + not recently matched
     const preferred = all.filter(c => c.commitment && !recentIds.has(c.id))
     const withCommitment = all.filter(c => c.commitment)
