@@ -85,7 +85,7 @@ export default function GroupDetail() {
       excuses = data || []
     }
 
-    const memberList = (mems || []).map(m => {
+    const memberList = (mems || []).filter(m => m.users).map(m => {
       const u = m.users
       const commitment = commitments?.find(c => c.user_id === m.user_id)
       const role = m.role || 'member'
