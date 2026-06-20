@@ -277,15 +277,17 @@ export default function GroupDetail() {
         </div>
       </div>
 
-      {/* Commitment prompt when none set */}
+      {/* Commitment gate — must set before seeing group */}
       {!myCommitment && (
-        <div className="bg-white border border-burg rounded-2xl shadow-card p-5 mb-5">
-          <p className="text-xs font-medium text-burg uppercase tracking-wider mb-3">Set this week's commitment</p>
+        <div className="bg-white border border-burg rounded-2xl shadow-card p-6 mb-5">
+          <p className="text-xs font-medium text-burg uppercase tracking-wider mb-1">Before you continue</p>
+          <p className="text-base font-serif text-text mb-1">Set your commitment for this week</p>
+          <p className="text-xs text-text3 mb-4">Every member needs a commitment to participate in the group.</p>
           <CommitmentForm groupId={groupId} onSaved={fetchAll} />
         </div>
       )}
 
-      {/* My commitment + check-in */}
+      {/* Rest of group hidden until commitment is set */}
       {myCommitment && (
         <div className="bg-white border border-border rounded-2xl shadow-card p-5 mb-5">
           <p className="text-xs font-medium text-text2 uppercase tracking-wider mb-1">Your commitment</p>
@@ -329,8 +331,8 @@ export default function GroupDetail() {
         </div>
       )}
 
-      {/* Members */}
-      <div className="bg-white border border-border rounded-2xl shadow-card p-5 mb-4">
+      {/* Members — only shown once commitment is set */}
+      {myCommitment && <div className="bg-white border border-border rounded-2xl shadow-card p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs font-medium text-text2 uppercase tracking-wider">Group progress this week</p>
           <DayTrack states={[]} showLabels />
@@ -388,7 +390,7 @@ export default function GroupDetail() {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Pending invitations */}
       {pendingInvites.length > 0 && (
