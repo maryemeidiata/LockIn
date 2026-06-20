@@ -496,10 +496,8 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
   async function inviteUser(person) {
     const { data: existing } = await supabase.from('group_members').select('user_id').eq('group_id', groupId).eq('user_id', person.id).maybeSingle()
     if (existing) { setFeedback(f => ({ ...f, [person.id]: 'member' })); return }
-    const { data: existingInv } = await supabase.from('invitations').select('id').eq('group_id', groupId).eq('invited_user_id', person.id).eq('status', 'pending').maybeSingle()
-    if (existingInv) { setFeedback(f => ({ ...f, [person.id]: 'pending' })); return }
-    const { error } = await supabase.from('invitations').insert({ group_id: groupId, invited_by: userId, invited_user_id: person.id, status: 'pending' })
-    if (!error) { setFeedback(f => ({ ...f, [person.id]: 'invited' })); setInvitedCount(n => n + 1) }
+    const { error } = await supabase.from('group_members').insert({ group_id: groupId, user_id: person.id, role: 'member' })
+    if (!error) { setFeedback(f => ({ ...f, [person.id]: 'added' })); setInvitedCount(n => n + 1) }
   }
 
   async function handleEmailInvite(e) {
@@ -579,7 +577,7 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
                             Invite
                           </button>
                         )}
-                        {fb === 'invited' && <span className="text-[11px] font-semibold text-burg flex-shrink-0">Invited ✓</span>}
+                        {fb === 'added' && <span className="text-[11px] font-semibold text-burg flex-shrink-0">Added ✓</span>}
                       </div>
                     )
                   })}
@@ -592,7 +590,7 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
 
               {invitedCount > 0 && (
                 <button onClick={onInvited} className="w-full py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
-                  Done · {invitedCount} invited
+                  Done · {invitedCount} added
                 </button>
               )}
             </div>
