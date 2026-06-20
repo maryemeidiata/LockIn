@@ -37,6 +37,17 @@ export default function Signup() {
       avatar_initials: initials,
     })
 
+    // Auto-join the welcome group
+    const WELCOME_GROUP_ID = 'dcc5b2d7-c0f6-4a44-9250-37c51466cf88'
+    const newUserId = (await supabase.auth.getUser()).data.user?.id
+    if (newUserId) {
+      await supabase.from('group_members').insert({
+        group_id: WELCOME_GROUP_ID,
+        user_id: newUserId,
+        role: 'member',
+      })
+    }
+
     setLoading(false)
     const pendingToken = sessionStorage.getItem('pending_invite_token')
     if (pendingToken) {
