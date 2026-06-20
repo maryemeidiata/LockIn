@@ -380,7 +380,7 @@ export default function GroupDetail() {
               {isAdmin && m.id !== user.id && (
                 <button
                   onClick={() => removeMember(m.id)}
-                  className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-[11px] text-text3 hover:text-burg hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Remove from group"
                 >
                   ✕
