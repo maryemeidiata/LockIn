@@ -341,7 +341,7 @@ export default function GroupDetail() {
             <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-cream2 last:border-0 group">
               <Avatar userId={m.id} initials={m.avatar_initials} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text">
+                <p className="text-sm font-medium text-text truncate">
                   {m.id === user.id ? 'You' : m.name}
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
@@ -362,7 +362,7 @@ export default function GroupDetail() {
               {m.id !== user.id && (
                 <button
                   onClick={() => { setNudgeTarget({ id: m.id, name: m.name?.split(' ')[0] || m.name }); setNudgeMsg('') }}
-                  className="ml-1 text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  className="ml-1 text-[11px] text-text3 hover:text-burg hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
                   title="Send a nudge"
                 >
                   Nudge
@@ -371,7 +371,7 @@ export default function GroupDetail() {
               {isAdmin && m.id !== user.id && m.role !== 'admin' && (
                 <button
                   onClick={() => promoteToAdmin(m.id)}
-                  className="text-[11px] text-text3 hover:text-burg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                  className="text-[11px] text-text3 hover:text-burg hidden md:inline opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
                   title="Make admin"
                 >
                   Make admin
