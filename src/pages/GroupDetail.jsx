@@ -341,7 +341,7 @@ export default function GroupDetail() {
             <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-cream2 last:border-0 group">
               <Avatar userId={m.id} initials={m.avatar_initials} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text truncate">
+                <p className="text-sm font-medium text-text">
                   {m.id === user.id ? 'You' : m.name}
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
