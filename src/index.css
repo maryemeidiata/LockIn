@@ -26,8 +26,10 @@ body {
   font-size: 17px;
   background: #FAF6F1;
   background-image:
-    radial-gradient(ellipse at 0% 0%, #DFC4B2 0%, #FAF6F1 48%),
-    radial-gradient(ellipse at 100% 100%, #D8BBA8 0%, #FAF6F1 48%);
+    radial-gradient(ellipse 70% 55% at 0% 0%, rgba(221,208,200,0.55) 0%, transparent 100%),
+    radial-gradient(ellipse 65% 50% at 100% 100%, rgba(232,221,208,0.6) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 35% at 100% 0%, rgba(196,115,138,0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 35% 30% at 0% 100%, rgba(107,30,58,0.06) 0%, transparent 100%);
   background-attachment: fixed;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
