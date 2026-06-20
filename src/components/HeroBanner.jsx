@@ -1,7 +1,7 @@
 export default function HeroBanner({ greeting, firstName, date, week }) {
   return (
-    <div className="rounded-2xl overflow-hidden shadow-card-md relative mb-6">
-      <svg viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', width: '100%', minHeight: '120px' }}>
+    <div className="rounded-2xl overflow-hidden shadow-card-md relative mb-6" style={{ minHeight: '120px' }}>
+      <svg viewBox="0 0 1200 200" xmlns="http://www.w3.org/2000/svg" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
         <defs>
           <linearGradient id="hb-sky" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#2A0A14" />
