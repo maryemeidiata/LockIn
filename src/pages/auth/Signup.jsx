@@ -38,7 +38,13 @@ export default function Signup() {
     })
 
     setLoading(false)
-    navigate('/onboarding')
+    const pendingToken = sessionStorage.getItem('pending_invite_token')
+    if (pendingToken) {
+      sessionStorage.removeItem('pending_invite_token')
+      navigate(`/join/${pendingToken}`)
+    } else {
+      navigate('/onboarding')
+    }
   }
 
   return (

@@ -11,7 +11,6 @@ import LoadingPulse from '../components/ui/LoadingPulse'
 import CardTag from '../components/ui/CardTag'
 import { clearCache } from '../lib/cache'
 
-const MAX_MEMBERS = 6
 
 export default function GroupDetail() {
   const { id: groupId } = useParams()
@@ -34,6 +33,7 @@ export default function GroupDetail() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false)
 
   const weekStart = getCurrentWeekStartStr()
   const dayIdx = getDayIndex()
@@ -164,6 +164,26 @@ export default function GroupDetail() {
     fetchPendingInvites()
   }
 
+  async function copyInviteLink() {
+    let { data: existing } = await supabase
+      .from('invite_links')
+      .select('token')
+      .eq('group_id', groupId)
+      .eq('created_by', user.id)
+      .maybeSingle()
+
+    let token = existing?.token
+    if (!token) {
+      token = crypto.randomUUID()
+      await supabase.from('invite_links').insert({ token, group_id: groupId, created_by: user.id })
+    }
+
+    const url = `${window.location.origin}/join/${token}`
+    await navigator.clipboard.writeText(url)
+    setInviteLinkCopied(true)
+    setTimeout(() => setInviteLinkCopied(false), 2000)
+  }
+
   async function leaveGroup() {
     setLeaving(true)
     await supabase.from('group_members').delete().eq('group_id', groupId).eq('user_id', user.id)
@@ -197,8 +217,7 @@ export default function GroupDetail() {
   if (loading) return <LoadingPulse lines={5} />
 
   const isAdmin = members.find(m => m.id === user.id)?.role === 'admin'
-  const totalSlots = members.length + pendingInvites.length
-  const canInvite = isAdmin && totalSlots < MAX_MEMBERS
+  const isMember = members.some(m => m.id === user.id)
 
   return (
     <div>
@@ -229,12 +248,12 @@ export default function GroupDetail() {
           >
             Leave
           </button>
-          {canInvite && (
+          {isMember && (
             <button
-              onClick={() => setShowInviteModal(true)}
+              onClick={copyInviteLink}
               className="px-4 py-2 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors"
             >
-              Invite
+              {inviteLinkCopied ? 'Copied!' : 'Invite'}
             </button>
           )}
         </div>
@@ -376,11 +395,6 @@ export default function GroupDetail() {
         </div>
       )}
 
-      {!canInvite && (
-        <p className="text-xs text-text3 text-center mt-4">
-          Group is full ({MAX_MEMBERS} people max including pending invites).
-        </p>
-      )}
 
       {showInviteModal && (
         <InviteModal
