@@ -1,19 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Logo from '../../components/Logo'
 
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 5
 
 export default function Onboarding() {
   const { user, refreshProfile } = useAuth()
   const [step, setStep] = useState(1)
+  const [username, setUsername] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState('idle')
   const [northStar, setNorthStar] = useState('')
-  const [notifStatus, setNotifStatus] = useState('idle') // idle | granted | denied | skipped
+  const [notifStatus, setNotifStatus] = useState('idle')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!username) { setUsernameStatus('idle'); return }
+    if (username.length < 3 || !/^[a-z0-9_]+$/.test(username)) { setUsernameStatus('invalid'); return }
+    setUsernameStatus('checking')
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from('users').select('id').eq('username', username).maybeSingle()
+      setUsernameStatus(data ? 'taken' : 'available')
+    }, 400)
+    return () => clearTimeout(t)
+  }, [username])
 
   function persistNorthStar(text) {
     if (!text.trim() || !user?.id) return
@@ -28,11 +41,18 @@ export default function Onboarding() {
   }
 
   async function handleNext() {
-    if (step === 2 && !northStar.trim()) {
+    setError('')
+    if (step === 2) {
+      if (username && usernameStatus === 'available') {
+        await supabase.from('users').update({ username }).eq('id', user.id)
+        await refreshProfile()
+      }
+    }
+    if (step === 3 && !northStar.trim()) {
       setError('Please share your North Star before continuing.')
       return
     }
-    if (step === 2) { try { persistNorthStar(northStar) } catch (_) {} }
+    if (step === 3) { try { persistNorthStar(northStar) } catch (_) {} }
     if (step < TOTAL_STEPS) {
       setStep(s => s + 1)
     } else {
@@ -51,7 +71,6 @@ export default function Onboarding() {
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg page-fade">
 
-        {/* Logo */}
         <div className="flex justify-center mb-10">
           <Logo size="lg" />
         </div>
@@ -68,9 +87,17 @@ export default function Onboarding() {
           ))}
         </div>
 
-        {/* Step content */}
         {step === 1 && <StepWelcome onNext={handleNext} />}
         {step === 2 && (
+          <StepUsername
+            value={username}
+            onChange={setUsername}
+            status={usernameStatus}
+            onNext={handleNext}
+            onSkip={() => setStep(s => s + 1)}
+          />
+        )}
+        {step === 3 && (
           <StepNorthStar
             value={northStar}
             onChange={setNorthStar}
@@ -80,8 +107,8 @@ export default function Onboarding() {
             onSkip={() => setStep(s => s + 1)}
           />
         )}
-        {step === 3 && <StepHowItWorks onNext={handleNext} />}
-        {step === 4 && (
+        {step === 4 && <StepHowItWorks onNext={handleNext} />}
+        {step === 5 && (
           <StepNotifications
             status={notifStatus}
             onRequest={requestNotifications}
@@ -157,6 +184,63 @@ function StepWelcome({ onNext }) {
   )
 }
 
+function StepUsername({ value, onChange, status, onNext, onSkip }) {
+  return (
+    <div>
+      <h1 className="font-serif text-[28px] text-text leading-tight text-center mb-3">
+        Pick your @handle
+      </h1>
+      <p className="text-sm text-text3 text-center leading-relaxed mb-8 max-w-sm mx-auto">
+        This is how your crew will find and invite you. Lowercase, no spaces.
+      </p>
+
+      <div className="relative mb-1">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text2 font-medium select-none">@</span>
+        <input
+          value={value}
+          onChange={e => onChange(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20))}
+          placeholder="yourhandle"
+          maxLength={20}
+          autoFocus
+          className="w-full border border-border rounded-xl pl-8 pr-10 py-4 text-base text-text bg-white focus:outline-none focus:border-burg placeholder-text3 shadow-card"
+        />
+        {status === 'checking' && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-burg border-t-transparent rounded-full animate-spin" />
+        )}
+        {status === 'available' && (
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-green-600 font-semibold">✓</span>
+        )}
+        {(status === 'taken' || status === 'invalid') && value.length > 0 && (
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-burg font-semibold">✗</span>
+        )}
+      </div>
+
+      <p className={`text-xs mb-6 min-h-[16px] ${status === 'available' ? 'text-green-600' : status === 'taken' ? 'text-burg' : 'text-text3'}`}>
+        {status === 'idle' && 'Letters, numbers, and _ only. 3–20 characters.'}
+        {status === 'checking' && 'Checking…'}
+        {status === 'available' && `@${value} is available!`}
+        {status === 'taken' && 'That handle is taken. Try another.'}
+        {status === 'invalid' && value.length > 0 && 'Letters, numbers, and _ only. At least 3 characters.'}
+      </p>
+
+      <button
+        onClick={onNext}
+        disabled={status !== 'available'}
+        className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50"
+      >
+        Continue
+      </button>
+      <button
+        type="button"
+        onClick={onSkip}
+        className="w-full mt-2 py-2 text-xs text-text3 hover:text-text2 transition-colors"
+      >
+        Skip for now
+      </button>
+    </div>
+  )
+}
+
 function StepNorthStar({ value, onChange, error, loading, onNext, onSkip }) {
   return (
     <div>
@@ -213,24 +297,9 @@ function StepHowItWorks({ onNext }) {
 
       <div className="space-y-0 mb-8">
         {[
-          {
-            day: 'Mon',
-            color: 'bg-burg',
-            title: 'Set your commitment',
-            desc: 'One specific thing you\'ll do this week. Add a consequence if you miss it.',
-          },
-          {
-            day: 'Tue–Sat',
-            color: 'bg-burg/70',
-            title: 'Check in daily',
-            desc: 'One tap to confirm you did it. Miss a day? Submit an excuse and your group votes.',
-          },
-          {
-            day: 'Sun',
-            color: 'bg-burg/40',
-            title: 'Reflect',
-            desc: 'How did the week go? Your streak and history build over time.',
-          },
+          { day: 'Mon', color: 'bg-burg', title: 'Set your commitment', desc: "One specific thing you'll do this week. Add a consequence if you miss it." },
+          { day: 'Tue–Sat', color: 'bg-burg/70', title: 'Check in daily', desc: "One tap to confirm you did it. Miss a day? Submit an excuse and your group votes." },
+          { day: 'Sun', color: 'bg-burg/40', title: 'Reflect', desc: "How did the week go? Your streak and history build over time." },
         ].map((item, i) => (
           <div key={i} className="flex gap-4">
             <div className="flex flex-col items-center">
@@ -251,10 +320,7 @@ function StepHowItWorks({ onNext }) {
         <strong className="text-text">First step:</strong> Go to <strong>Groups</strong> and create your first group, then invite the people who hold you accountable. Or wait to be invited.
       </div>
 
-      <button
-        onClick={onNext}
-        className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors"
-      >
+      <button onClick={onNext} className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors">
         Got it
       </button>
     </div>
@@ -270,51 +336,25 @@ function StepNotifications({ status, onRequest, onSkip, onDone }) {
           <path d="M13.73 21a2 2 0 01-3.46 0"/>
         </svg>
       </div>
-      <h1 className="font-serif text-[28px] text-text leading-tight mb-3">
-        Never miss a check-in
-      </h1>
+      <h1 className="font-serif text-[28px] text-text leading-tight mb-3">Never miss a check-in</h1>
       <p className="text-sm text-text3 leading-relaxed mb-8 max-w-sm mx-auto">
         LockIn sends you a daily reminder at 9am, a Sunday goal-setting nudge, and lets your friends nudge you when you go silent.
       </p>
 
       {status === 'granted' ? (
         <div className="space-y-4">
-          <div className="bg-cream2 border border-border rounded-xl p-4 text-sm text-text">
-            Notifications enabled. You're all set.
-          </div>
-          <button
-            onClick={onDone}
-            className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors"
-          >
-            Start using LockIn
-          </button>
+          <div className="bg-cream2 border border-border rounded-xl p-4 text-sm text-text">Notifications enabled. You're all set.</div>
+          <button onClick={onDone} className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors">Start using LockIn</button>
         </div>
       ) : status === 'denied' ? (
         <div className="space-y-4">
-          <div className="bg-cream2 border border-border rounded-xl p-4 text-sm text-text2">
-            Notifications blocked. You can enable them later in your browser settings.
-          </div>
-          <button
-            onClick={onDone}
-            className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors"
-          >
-            Start using LockIn
-          </button>
+          <div className="bg-cream2 border border-border rounded-xl p-4 text-sm text-text2">Notifications blocked. You can enable them later in your browser settings.</div>
+          <button onClick={onDone} className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors">Start using LockIn</button>
         </div>
       ) : (
         <div className="space-y-3">
-          <button
-            onClick={onRequest}
-            className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors"
-          >
-            Enable notifications
-          </button>
-          <button
-            onClick={onSkip}
-            className="w-full py-3.5 text-text3 text-sm hover:text-text2 transition-colors"
-          >
-            Maybe later
-          </button>
+          <button onClick={onRequest} className="w-full py-3.5 bg-burg text-cream font-medium rounded-[10px] hover:bg-burg-light transition-colors">Enable notifications</button>
+          <button onClick={onSkip} className="w-full py-3.5 text-text3 text-sm hover:text-text2 transition-colors">Maybe later</button>
         </div>
       )}
     </div>

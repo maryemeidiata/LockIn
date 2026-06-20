@@ -118,7 +118,7 @@ export default function Groups() {
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="font-serif text-[22px] text-text tracking-tight leading-none mb-0.5">My groups</h1>
-          <p className="text-xs text-text3">{groups.length > 0 ? `${groups.length} of ${MAX_GROUPS} groups` : 'Up to 3 groups'}</p>
+          <p className="text-xs text-text3">{groups.length > 0 ? `${groups.length} group${groups.length !== 1 ? 's' : ''}` : 'Create or join a group'}</p>
         </div>
         <button
           onClick={() => {
@@ -380,8 +380,8 @@ function CreateGroupModal({ onClose, onCreated, userId }) {
             {friends.length === 0 ? (
               <p className="text-xs text-text3 italic">No contacts yet. Add friends from the Friends tab first.</p>
             ) : (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {friends.slice(0, 5).map(f => (
+              <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                {friends.map(f => (
                   <button
                     key={f.id}
                     type="button"

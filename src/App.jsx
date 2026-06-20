@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from './context/AuthContext'
+import UsernameClaimModal from './components/UsernameClaimModal'
 import AppLayout from './components/AppLayout'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
@@ -27,10 +29,30 @@ function RequireAuth({ children }) {
 
 function RequireNorthStar({ children }) {
   const { user, profile, loading } = useAuth()
+  const [usernameDismissed, setUsernameDismissed] = useState(() => {
+    const t = localStorage.getItem('lockin_username_skip')
+    return t && Date.now() - parseInt(t) < 7 * 24 * 60 * 60 * 1000
+  })
+
   if (loading) return <div className="min-h-screen bg-cream" />
   if (!user) return <Navigate to="/login" replace />
   if (!profile?.north_star) return <Navigate to="/onboarding" replace />
-  return children
+
+  const showUsernameModal = !profile?.username && !usernameDismissed
+
+  return (
+    <>
+      {children}
+      {showUsernameModal && (
+        <UsernameClaimModal
+          onSkip={() => {
+            localStorage.setItem('lockin_username_skip', Date.now().toString())
+            setUsernameDismissed(true)
+          }}
+        />
+      )}
+    </>
+  )
 }
 
 export default function App() {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -32,6 +32,7 @@ export default function GroupDetail() {
   const [nudgeSent, setNudgeSent] = useState(false)
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   const weekStart = getCurrentWeekStartStr()
   const dayIdx = getDayIndex()
@@ -200,6 +201,18 @@ export default function GroupDetail() {
           <CardTag label={`${members.length} members`} variant="group" />
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:border-burg hover:text-burg transition-colors text-text3"
+              title="Group settings"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setShowLeaveConfirm(true)}
             className="px-3 py-2 text-xs font-medium text-text3 border border-border rounded-[10px] hover:border-burg hover:text-burg transition-colors"
@@ -362,6 +375,14 @@ export default function GroupDetail() {
         />
       )}
 
+      {showSettings && (
+        <GroupSettingsModal
+          group={group}
+          onClose={() => setShowSettings(false)}
+          onSaved={updates => { setGroup(g => ({ ...g, ...updates })); setShowSettings(false) }}
+        />
+      )}
+
       {/* Leave group confirm */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" onClick={() => setShowLeaveConfirm(false)}>
@@ -428,100 +449,259 @@ export default function GroupDetail() {
 
 function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingCount }) {
   const { profile } = useAuth()
+  const [tab, setTab] = useState('search')
+  // Search tab
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [feedback, setFeedback] = useState({}) // { [id]: 'invited' | 'member' | 'pending' }
+  const [invitedCount, setInvitedCount] = useState(0)
+  // Email tab
   const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [emailError, setEmailError] = useState('')
+  const [emailSuccess, setEmailSuccess] = useState(false)
 
-  async function handleInvite(e) {
+  async function searchUsers(query) {
+    if (!query.trim()) { setResults([]); return }
+    setSearching(true)
+    const { data } = await supabase
+      .from('users')
+      .select('id, name, username, avatar_initials, avatar_url')
+      .or(`name.ilike.%${query}%,username.ilike.%${query}%`)
+      .neq('id', userId)
+      .limit(10)
+    setResults(data || [])
+    setSearching(false)
+  }
+
+  async function inviteUser(person) {
+    const { data: existing } = await supabase.from('group_members').select('user_id').eq('group_id', groupId).eq('user_id', person.id).maybeSingle()
+    if (existing) { setFeedback(f => ({ ...f, [person.id]: 'member' })); return }
+    const { data: existingInv } = await supabase.from('invitations').select('id').eq('group_id', groupId).eq('invited_user_id', person.id).eq('status', 'pending').maybeSingle()
+    if (existingInv) { setFeedback(f => ({ ...f, [person.id]: 'pending' })); return }
+    const { error } = await supabase.from('invitations').insert({ group_id: groupId, invited_by: userId, invited_user_id: person.id, status: 'pending' })
+    if (!error) { setFeedback(f => ({ ...f, [person.id]: 'invited' })); setInvitedCount(n => n + 1) }
+  }
+
+  async function handleEmailInvite(e) {
     e.preventDefault()
     if (!email.trim()) return
-    setLoading(true)
-    setError('')
-
+    setEmailLoading(true)
+    setEmailError('')
     const { data: { session } } = await supabase.auth.getSession()
-
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          group_id: groupId,
-          group_name: groupName,
-          inviter_name: profile?.name || 'A friend',
-        }),
-      }
-    )
-
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}`, 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
+      body: JSON.stringify({ email: email.trim(), group_id: groupId, group_name: groupName, inviter_name: profile?.name || 'A friend' }),
+    })
     const json = await res.json()
-    setLoading(false)
-
-    if (!res.ok) {
-      setError(json.error || 'Failed to send invite')
-      return
-    }
-
-    if (json.addedDirectly) {
-      setSuccess(true)
-      setError(`${email} already has an account and has been added to the group.`)
-    } else {
-      setSuccess(true)
-    }
+    setEmailLoading(false)
+    if (!res.ok) { setEmailError(json.error || 'Failed to send invite'); return }
+    setEmailSuccess(true)
   }
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-        <h2 className="font-serif text-xl text-text mb-1">Invite someone</h2>
-        <p className="text-xs text-text3 mb-5">They'll get an email to join {groupName}.</p>
-
-        {success ? (
-          <div className="space-y-4">
-            <div className="bg-cream2 rounded-xl p-4 text-sm text-text">
-              {error || `Invite sent to ${email}!`}
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => { setSuccess(false); setEmail(''); setError('') }} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border">
-                Invite another
-              </button>
-              <button onClick={onInvited} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
-                Done
-              </button>
-            </div>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header + tabs */}
+        <div className="px-6 pt-5 pb-0 border-b border-cream2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-serif text-xl text-text">Invite to {groupName}</h2>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-cream2 text-text3 transition-colors">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
           </div>
-        ) : (
-          <form onSubmit={handleInvite} className="space-y-4">
+          <div className="flex gap-5">
+            {[['search', 'Search by name'], ['email', 'Invite by email']].map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`text-sm pb-3 border-b-2 transition-colors ${tab === id ? 'border-burg text-burg font-medium' : 'border-transparent text-text3 hover:text-text2'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6">
+          {tab === 'search' && (
             <div>
-              <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-1.5">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="friend@example.com"
-                autoFocus
-                className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg placeholder-text3"
-              />
+              <div className="flex items-center gap-2 bg-cream2 rounded-2xl px-4 py-2.5 mb-4">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text3 flex-shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); searchUsers(e.target.value) }}
+                  placeholder="Name or @username…"
+                  className="flex-1 text-sm text-text bg-transparent focus:outline-none placeholder-text3"
+                />
+              </div>
+
+              {results.length > 0 ? (
+                <div className="space-y-0.5 max-h-60 overflow-y-auto mb-4">
+                  {results.map(person => {
+                    const fb = feedback[person.id]
+                    return (
+                      <div key={person.id} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-cream2/60 transition-colors">
+                        <Avatar userId={person.id} initials={person.avatar_initials} avatarUrl={person.avatar_url} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text">{person.name}</p>
+                          {person.username
+                            ? <p className="text-[11px] text-text3">@{person.username}</p>
+                            : fb === 'member' ? <p className="text-[11px] text-text3 italic">Already a member</p>
+                            : fb === 'pending' ? <p className="text-[11px] text-text3 italic">Already invited</p>
+                            : null}
+                          {person.username && fb === 'member' && <p className="text-[11px] text-text3 italic">Already a member</p>}
+                          {person.username && fb === 'pending' && <p className="text-[11px] text-text3 italic">Already invited</p>}
+                        </div>
+                        {!fb && (
+                          <button onClick={() => inviteUser(person)} className="text-[11px] font-medium text-burg border border-burg rounded-lg px-2.5 py-1 hover:bg-burg hover:text-cream transition-colors flex-shrink-0">
+                            Invite
+                          </button>
+                        )}
+                        {fb === 'invited' && <span className="text-[11px] font-semibold text-burg flex-shrink-0">Invited ✓</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : search && !searching ? (
+                <p className="text-sm text-text3 text-center py-6 italic">No one found — try the email tab to invite them.</p>
+              ) : !search ? (
+                <p className="text-xs text-text3 text-center py-4">Search for people already on LockIn.</p>
+              ) : null}
+
+              {invitedCount > 0 && (
+                <button onClick={onInvited} className="w-full py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors">
+                  Done · {invitedCount} invited
+                </button>
+              )}
             </div>
-            {error && <p className="text-xs text-burg">{error}</p>}
-            <div className="flex gap-2 pt-1">
-              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border">
-                Cancel
-              </button>
-              <button type="submit" disabled={loading} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50">
-                {loading ? 'Sending...' : 'Send invite'}
-              </button>
+          )}
+
+          {tab === 'email' && (
+            <div>
+              <p className="text-xs text-text3 mb-4">For people not on LockIn yet. They'll get an email to join {groupName}.</p>
+              {emailSuccess ? (
+                <div className="space-y-4">
+                  <div className="bg-cream2 rounded-xl p-4 text-sm text-text">Invite sent to {email}!</div>
+                  <div className="flex gap-2">
+                    <button onClick={() => { setEmailSuccess(false); setEmail('') }} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border">
+                      Invite another
+                    </button>
+                    <button onClick={onInvited} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px]">
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleEmailInvite} className="space-y-4">
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="friend@example.com" autoFocus={tab === 'email'}
+                    className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg placeholder-text3" />
+                  {emailError && <p className="text-xs text-burg">{emailError}</p>}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border">Cancel</button>
+                    <button type="submit" disabled={emailLoading} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] disabled:opacity-50">
+                      {emailLoading ? 'Sending...' : 'Send invite'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-          </form>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
+function GroupSettingsModal({ group, onClose, onSaved }) {
+  const [name, setName] = useState(group?.name || '')
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(group?.avatar_url || null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const fileRef = useRef(null)
+
+  function handleFileSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  async function handleSave() {
+    if (!name.trim()) { setError('Group name is required.'); return }
+    setLoading(true)
+    setError('')
+
+    let avatar_url = group?.avatar_url || null
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split('.').pop()
+      const path = `${group.id}.${ext}`
+      const { error: uploadErr } = await supabase.storage.from('group-avatars').upload(path, avatarFile, { contentType: avatarFile.type, upsert: true })
+      if (uploadErr) { setError('Photo upload failed: ' + uploadErr.message); setLoading(false); return }
+      const { data: { publicUrl } } = supabase.storage.from('group-avatars').getPublicUrl(path)
+      avatar_url = publicUrl + `?t=${Date.now()}`
+    }
+
+    const updates = { name: name.trim() }
+    if (avatar_url !== group?.avatar_url) updates.avatar_url = avatar_url
+
+    const { error: updateErr } = await supabase.from('groups').update(updates).eq('id', group.id)
+    setLoading(false)
+    if (updateErr) { setError(updateErr.message); return }
+    onSaved({ ...updates })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <h2 className="font-serif text-xl text-text mb-5">Group settings</h2>
+
+        {/* Group photo */}
+        <div className="flex flex-col items-center mb-5">
+          <button onClick={() => fileRef.current?.click()} className="relative group mb-2">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden bg-cream2 flex items-center justify-center border border-border">
+              {avatarPreview
+                ? <img src={avatarPreview} alt="Group" className="w-full h-full object-cover" />
+                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                  </svg>
+              }
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </button>
+          <p className="text-[11px] text-text3">Tap to change group photo</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+        </div>
+
+        {/* Name */}
+        <div className="mb-5">
+          <label className="block text-xs font-medium text-text2 uppercase tracking-wider mb-1.5">Group name</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full border border-border rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:border-burg"
+          />
+        </div>
+
+        {error && <p className="text-xs text-burg mb-3">{error}</p>}
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50">
+            {loading ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
