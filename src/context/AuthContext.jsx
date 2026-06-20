@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
+        setLoading(true)
         fetchProfile(session.user.id)
         applyPendingInvitations(session.user)
       } else { setProfile(null); setLoading(false) }
