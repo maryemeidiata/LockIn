@@ -341,12 +341,12 @@ export default function GroupDetail() {
             <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-cream2 last:border-0 group">
               <Avatar userId={m.id} initials={m.avatar_initials} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text">
+                <p className="text-sm font-medium text-text truncate">
                   {m.id === user.id ? 'You' : m.name}
                   {m.role === 'admin' && <span className="ml-2 text-[9px] text-burg font-medium uppercase tracking-wider">admin</span>}
                   {m.todayChecked && <span className="ml-2 text-[10px] text-burg font-medium">checked in</span>}
                 </p>
-                <p className="text-xs text-text3 line-clamp-2">{m.commitment_text || 'No commitment set'}</p>
+                <p className="text-xs text-text3 truncate">{m.commitment_text || 'No commitment set'}</p>
                 {m.todayPhoto && (
                   <a href={m.todayPhoto} target="_blank" rel="noopener noreferrer">
                     <img
