@@ -380,6 +380,7 @@ export default function GroupDetail() {
           group={group}
           onClose={() => setShowSettings(false)}
           onSaved={updates => { setGroup(g => ({ ...g, ...updates })); setShowSettings(false) }}
+          onDeleted={() => { clearCache('groups'); clearCache('overview'); navigate('/groups') }}
         />
       )}
 
@@ -616,13 +617,24 @@ function InviteModal({ groupId, groupName, userId, onClose, onInvited, existingC
   )
 }
 
-function GroupSettingsModal({ group, onClose, onSaved }) {
+function GroupSettingsModal({ group, onClose, onSaved, onDeleted }) {
   const [name, setName] = useState(group?.name || '')
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(group?.avatar_url || null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const fileRef = useRef(null)
+
+  async function handleDelete() {
+    setDeleting(true)
+    await supabase.from('invitations').delete().eq('group_id', group.id)
+    await supabase.from('group_members').delete().eq('group_id', group.id)
+    await supabase.from('groups').delete().eq('id', group.id)
+    setDeleting(false)
+    onDeleted()
+  }
 
   function handleFileSelect(e) {
     const file = e.target.files?.[0]
@@ -693,13 +705,38 @@ function GroupSettingsModal({ group, onClose, onSaved }) {
 
         {error && <p className="text-xs text-burg mb-3">{error}</p>}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-5">
           <button onClick={onClose} className="flex-1 py-2.5 bg-cream2 text-text2 text-sm font-medium rounded-[10px] border border-border hover:bg-cream3 transition-colors">
             Cancel
           </button>
           <button onClick={handleSave} disabled={loading} className="flex-1 py-2.5 bg-burg text-cream text-sm font-medium rounded-[10px] hover:bg-burg-light transition-colors disabled:opacity-50">
             {loading ? 'Saving…' : 'Save changes'}
           </button>
+        </div>
+
+        {/* Danger zone */}
+        <div className="border-t border-border pt-4">
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full py-2.5 text-sm font-medium text-red-600 border border-red-200 rounded-[10px] hover:bg-red-50 transition-colors"
+            >
+              Delete group
+            </button>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <p className="text-sm font-medium text-red-700 mb-1">Delete "{group?.name}"?</p>
+              <p className="text-xs text-red-500 mb-4">This removes all members, invitations, and the group permanently. This cannot be undone.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2 text-xs font-medium text-text2 bg-white border border-border rounded-[10px]">
+                  Cancel
+                </button>
+                <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 text-xs font-medium text-white bg-red-600 rounded-[10px] hover:bg-red-700 transition-colors disabled:opacity-50">
+                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
